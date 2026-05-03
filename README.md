@@ -1,5 +1,11 @@
 # cng-data-antigravity
 
+> **Data has gravity.**
+> It accumulates in the cloud, massive and immovable.
+>
+> **But Cloud-Native Geospatial data also has antigravity.**
+> Declare your area of interest. Escape only what you need.
+
 `cng-data-antigravity` implements **data antigravity** for Cloud-Native Geospatial (CNG) sources.
 
 An `escape.yaml` file describes what to extract and from where. The tool checks source freshness, downloads only what changed, extracts an AOI-sized subset, and writes reproducible local outputs alongside a `metadata.json`.
