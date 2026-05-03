@@ -1,0 +1,62 @@
+# escape.yaml — CNG Data Antigravity configuration
+#
+# Required fields: aoi.bbox, extracts[].id, extracts[].source
+# outputs is optional. When omitted, defaults to:
+#   output/{source_type}/{id}.{ext}          (single output)
+#   output/{source_type}/{id}/{type}.parquet  (overture multi-type)
+# metadata.json is always written to output/{source_type}/{id}/metadata.json
+
+aoi:
+  bbox: [139.56, 35.52, 139.92, 35.82]  # [west, south, east, north]
+
+extracts:
+  # Overture Maps — multiple themes, one file per type
+  # → output/overture/overture-tokyo/{type}.parquet
+  - id: overture-tokyo
+    source:
+      type: overture
+      overtureTypes:
+        - building
+        - place
+        - segment
+        - connector
+        - infrastructure
+        - land
+        - land_cover
+        - land_use
+        - water
+        - division
+
+  # PMTiles subset extract
+  # → output/pmtiles/osm-jp.pmtiles
+  - id: osm-jp
+    source:
+      type: pmtiles
+      url: https://tile.openstreetmap.jp/static/planet.pmtiles
+
+  # Geofabrik OSM PBF bbox extract
+  # → output/geofabrik/kanto.osm.pbf
+  - id: kanto
+    source:
+      type: geofabrik
+      region: kanto
+
+  # STAC + COG — Sentinel-2 true color, lowest cloud cover in datetime range
+  # → output/stac-cog/sentinel2-tokyo.tif
+  - id: sentinel2-tokyo
+    source:
+      type: stac-cog
+      stacApiUrl: https://planetarycomputer.microsoft.com/api/stac/v1
+      collection: sentinel-2-l2a
+      asset: visual
+      datetime: "2025-09-01/2025-11-30"
+      maxCloudCover: 20
+
+  # --- explicit outputs example (override convention) ---
+  # - id: buildings-custom
+  #   source:
+  #     type: overture
+  #     overtureType: building
+  #   outputs:
+  #     - format: geoparquet
+  #       path: my-buildings.parquet
