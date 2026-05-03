@@ -53,8 +53,12 @@ The data escapes the cloud, without pulling the whole planet down with it.
 
 ## Installation
 
+> Not yet published to PyPI. Install from source:
+
 ```bash
-pip install cng-data-antigravity
+git clone https://github.com/yuiseki/cng-data-antigravity
+cd cng-data-antigravity
+uv sync
 ```
 
 Dependencies: `overturemaps`, `pmtiles`, `PyYAML`, `osmium`, `pystac-client`, `gdal`
@@ -220,7 +224,7 @@ extracts:
 
 ```bash
 uv sync
-uv run pytest tests/                          # unit tests (network-free)
+SKIP_NETWORK_TESTS=1 uv run pytest tests/    # unit tests only (network-free)
 uv run pytest tests/test_e2e_osm_pbf.py      # E2E tests (real network, Monaco/Niue)
-SKIP_NETWORK_TESTS=1 uv run pytest tests/    # skip E2E
+uv run pytest tests/                          # all tests
 ```
