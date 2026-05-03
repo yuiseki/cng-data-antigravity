@@ -16,6 +16,9 @@ dependencies = [
   "overturemaps>=1.0.0",
   "pmtiles>=3.7.0",
   "PyYAML>=6.0",
+  "osmium>=4.0.0",
+  "pystac-client>=0.8.0",
+  "gdal==3.9.2",
 ]
 
 [project.scripts]
