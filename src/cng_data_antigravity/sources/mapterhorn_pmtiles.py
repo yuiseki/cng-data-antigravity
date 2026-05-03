@@ -17,6 +17,8 @@ import json
 from typing import Any
 from urllib.request import urlopen
 
+from cng_data_antigravity.adapters.common import make_request
+
 from cng_data_antigravity.config import SourceDef
 from cng_data_antigravity.sources import BUILTIN_SOURCES
 
@@ -27,7 +29,7 @@ _FALLBACK_URL = "https://download.mapterhorn.com/planet.pmtiles"
 
 def fetch_planet_entry() -> dict[str, Any]:
     """Return the planet.pmtiles entry from download_urls.json."""
-    with urlopen(_INDEX_URL, timeout=30) as response:
+    with urlopen(make_request(_INDEX_URL), timeout=30) as response:
         index = json.load(response)
     entry = next((item for item in index["items"] if item["name"] == _PLANET_NAME), None)
     if entry is None:

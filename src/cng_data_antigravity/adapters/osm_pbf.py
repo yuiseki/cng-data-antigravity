@@ -17,7 +17,7 @@ from urllib.request import urlopen
 import osmium
 import osmium.osm
 
-from cng_data_antigravity.adapters.common import head, utc_now
+from cng_data_antigravity.adapters.common import head, make_request, utc_now
 from cng_data_antigravity.config import AOIConfig, OutputConfig
 
 
@@ -26,7 +26,7 @@ def _resolve_pbf_url(source: dict[str, Any]) -> str:
         return source["url"]
     index_url = source["indexUrl"]
     region = source["region"]
-    with urlopen(index_url, timeout=30) as response:
+    with urlopen(make_request(index_url), timeout=30) as response:
         index = json.load(response)
     feature = next((f for f in index["features"] if f["properties"]["id"] == region), None)
     if feature is None:
@@ -43,7 +43,7 @@ def _cache_key(source: dict[str, Any]) -> str:
 
 def _download_pbf(url: str, dest: Path) -> None:
     tmp = dest.with_suffix(".tmp")
-    with urllib.request.urlopen(url) as response, tmp.open("wb") as out:
+    with urllib.request.urlopen(make_request(url), timeout=3600) as response, tmp.open("wb") as out:
         shutil.copyfileobj(response, out)
     tmp.rename(dest)
 

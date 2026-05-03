@@ -11,7 +11,7 @@ from pmtiles.reader import MmapSource, Reader
 from pmtiles.tile import zxy_to_tileid
 from pmtiles.writer import write
 
-from cng_data_antigravity.adapters.common import head, utc_now
+from cng_data_antigravity.adapters.common import head, make_request, utc_now
 from cng_data_antigravity.config import AOIConfig, OutputConfig
 
 MAX_WEB_MERCATOR_LAT = 85.05112878
@@ -128,7 +128,7 @@ def _open_pmtiles_reader(source_url: str):
 def _http_range_source(source_url: str):
     def get_bytes(offset: int, length: int) -> bytes:
         end = offset + length - 1
-        request = Request(source_url, headers={"Range": f"bytes={offset}-{end}"})
+        request = make_request(source_url, extra_headers={"Range": f"bytes={offset}-{end}"})
         with urlopen(request, timeout=30) as response:
             return response.read()
 

@@ -1,9 +1,12 @@
 # escape.yaml — CNG Data Antigravity configuration
 #
 # Built-in sources (no sources: section needed):
-#   overture        — Overture Maps, all themes → output/overture/{type}.parquet
-#   osm-jp-pmtiles  — OpenStreetMap Japan PMTiles → output/osm-jp-pmtiles/osm-jp-pmtiles.pmtiles
-#   sentinel-2-pc   — Sentinel-2 L2A via Planetary Computer → output/sentinel-2-pc/sentinel-2-pc.tif
+#   overture          — Overture Maps, all themes → output/overture/{type}.parquet
+#   osm-jp-pmtiles    — OpenStreetMap Japan PMTiles (tile.openstreetmap.jp)
+#   mapterhorn-pmtiles — Global OSM vector tiles (Mapterhorn planet.pmtiles, zoom 0-12)
+#   sentinel-2-pc     — Sentinel-2 L2A via Planetary Computer → output/sentinel-2-pc/sentinel-2-pc.tif
+#   osm-japan / osm-kanto / osm-kansai / osm-chubu / osm-kyushu / osm-tohoku / osm-hokkaido
+#   osm-asia / osm-europe / osm-north-america / osm-germany / osm-france / osm-great-britain
 #
 # Per-extract overrides (e.g. datetime, maxCloudCover) are written directly under the extract.
 # id is optional; defaults to the source name.
@@ -17,17 +20,13 @@ extracts:
 
   - source: osm-jp-pmtiles
 
+  - source: mapterhorn-pmtiles
+
+  - source: osm-kanto
+
   - source: sentinel-2-pc
     datetime: "2025-09-01/2025-11-30"
     maxCloudCover: 20
-
-  # Geofabrik requires a region, so define it in sources:
-  # sources:
-  #   osm-kanto:
-  #     adapter: geofabrik
-  #     region: kanto
-  # extracts:
-  #   - source: osm-kanto
 
   # Same source, different time range → use explicit id to avoid collision
   # - id: sentinel-2-winter
