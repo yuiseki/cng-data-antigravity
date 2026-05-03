@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from overturemaps import record_batch_reader
+from overturemaps.cli import type_theme_map
 from overturemaps.models import Backend, PipelineState
 from overturemaps.releases import get_latest_release
 from overturemaps.state import get_state_path, load_state, save_state
@@ -11,25 +12,6 @@ from overturemaps.writers import copy, get_writer
 
 from cng_data_antigravity.adapters.common import utc_now
 from cng_data_antigravity.config import AOIConfig, OutputConfig
-
-THEME_BY_TYPE = {
-    "building": "buildings",
-    "place": "places",
-    "segment": "transportation",
-    "connector": "transportation",
-    "infrastructure": "transportation",
-    "land": "base",
-    "land_cover": "base",
-    "land_use": "base",
-    "water": "base",
-    "division": "divisions",
-    "address": "addresses",
-}
-
-
-def _theme_for_type(overture_type: str) -> str:
-    return THEME_BY_TYPE.get(overture_type, f"{overture_type}s")
-
 
 def run_overture_extract(
     source: dict[str, Any],
@@ -49,6 +31,9 @@ def run_overture_extract(
     source_state: dict[str, Any] | None = None
 
     for overture_type in overture_types:
+        theme = type_theme_map.get(overture_type)
+        if theme is None:
+            raise ValueError(f"unknown Overture type: {overture_type}")
         typed_path = Path(str(output_path).replace("{type}", overture_type))
         typed_path.parent.mkdir(parents=True, exist_ok=True)
         state_path = get_state_path(str(typed_path))
@@ -77,7 +62,7 @@ def run_overture_extract(
         state = PipelineState(
             last_release=release,
             last_run=utc_now(),
-            theme=_theme_for_type(overture_type),
+            theme=theme,
             type=overture_type,
             bbox={
                 "xmin": aoi.bbox[0],
