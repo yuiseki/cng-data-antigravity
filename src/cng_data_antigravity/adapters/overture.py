@@ -5,13 +5,13 @@ from typing import Any
 
 from overturemaps import record_batch_reader
 from overturemaps.cli import type_theme_map
-from overturemaps.models import Backend, PipelineState
+from overturemaps.models import BBox, Backend, PipelineState
 from overturemaps.releases import get_latest_release
 from overturemaps.state import get_state_path, load_state, save_state
 from overturemaps.writers import copy, get_writer
 
 from cng_data_antigravity.adapters.common import utc_now
-from cng_data_antigravity.config import AOIConfig, OutputConfig
+from cng_data_antigravity.config import ALL_OVERTURE_TYPES, AOIConfig, OutputConfig
 
 def run_overture_extract(
     source: dict[str, Any],
@@ -23,9 +23,11 @@ def run_overture_extract(
     if output.format != "geoparquet":
         raise ValueError("overture source only supports geoparquet output")
 
-    overture_types = source.get("overtureTypes") or ([source["overtureType"]] if source.get("overtureType") else [])
-    if not overture_types:
-        raise ValueError("overture source requires overtureType or overtureTypes")
+    overture_types = (
+        source.get("overtureTypes")
+        or ([source["overtureType"]] if source.get("overtureType") else [])
+        or ALL_OVERTURE_TYPES
+    )
 
     release = source.get("release") or get_latest_release()
     source_state: dict[str, Any] | None = None
@@ -64,12 +66,12 @@ def run_overture_extract(
             last_run=utc_now(),
             theme=theme,
             type=overture_type,
-            bbox={
-                "xmin": aoi.bbox[0],
-                "ymin": aoi.bbox[1],
-                "xmax": aoi.bbox[2],
-                "ymax": aoi.bbox[3],
-            },
+            bbox=BBox(
+                xmin=aoi.bbox[0],
+                ymin=aoi.bbox[1],
+                xmax=aoi.bbox[2],
+                ymax=aoi.bbox[3],
+            ),
             backend=Backend.geoparquet,
             output=str(typed_path),
         )
