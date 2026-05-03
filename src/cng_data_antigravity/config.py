@@ -80,14 +80,27 @@ class EscapeConfig:
 
 
 def resolve_source(extract: ExtractConfig, sources: dict[str, SourceDef]) -> dict[str, Any]:
-    """Return the effective source dict for an extract (adapter type + merged config)."""
+    """Return the effective source dict for an extract (adapter type + merged config).
+
+    Resolution order:
+    1. Inline source dict (legacy explicit form)
+    2. Built-in source registry (cng_data_antigravity.sources)
+    3. User-defined sources section in escape.yaml
+    """
     if extract.inline_source is not None:
         # Legacy inline form: source: {type: ..., ...}
         return {**extract.inline_source, **extract.overrides}
 
-    source_def = sources.get(extract.source)
+    # Import here to avoid circular imports; BUILTIN_SOURCES is populated on import
+    from cng_data_antigravity.sources import BUILTIN_SOURCES
+
+    source_def = BUILTIN_SOURCES.get(extract.source) or sources.get(extract.source)
     if source_def is None:
-        raise ValueError(f"source {extract.source!r} not found in sources section")
+        raise ValueError(
+            f"source {extract.source!r} not found. "
+            f"Built-in sources: {sorted(BUILTIN_SOURCES)}. "
+            f"Defined in escape.yaml sources section: {sorted(sources)}."
+        )
     return {"type": source_def.adapter, **source_def.config, **extract.overrides}
 
 

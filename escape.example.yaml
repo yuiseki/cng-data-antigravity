@@ -1,67 +1,36 @@
 # escape.yaml — CNG Data Antigravity configuration
 #
-# sources:  Named data source definitions (adapter + config).
-#           Reusable across multiple extracts or escape files.
+# Built-in sources (no sources: section needed):
+#   overture        — Overture Maps, all themes → output/overture/{type}.parquet
+#   osm-jp-pmtiles  — OpenStreetMap Japan PMTiles → output/osm-jp-pmtiles/osm-jp-pmtiles.pmtiles
+#   sentinel-2-pc   — Sentinel-2 L2A via Planetary Computer → output/sentinel-2-pc/sentinel-2-pc.tif
 #
-# extracts: What to extract for this AOI.
-#           source: <source-name>   — reference to a named source
-#           id: <name>              — optional; defaults to source name
-#           <key>: <value>          — per-extract overrides (e.g. datetime for stac-cog)
-#
-# outputs:  Optional. When omitted, defaults to:
-#             output/{id}/{id}.{ext}          (single output)
-#             output/{id}/{type}.parquet      (overture, all types)
-#           metadata.json is always written to output/{id}/metadata.json
+# Per-extract overrides (e.g. datetime, maxCloudCover) are written directly under the extract.
+# id is optional; defaults to the source name.
+# outputs is optional; defaults to output/{id}/{id}.{ext} (or output/{id}/{type}.parquet for overture).
 
 aoi:
   bbox: [139.56, 35.52, 139.92, 35.82]  # [west, south, east, north]
 
-sources:
-  # Overture Maps (all themes by default)
-  overture:
-    adapter: overture
-
-  # OpenStreetMap Japan — PMTiles
-  osm-jp:
-    adapter: pmtiles
-    url: https://tile.openstreetmap.jp/static/planet.pmtiles
-
-  # Geofabrik — Kanto region OSM PBF
-  osm-kanto:
-    adapter: geofabrik
-    region: kanto
-
-  # Sentinel-2 L2A via Microsoft Planetary Computer
-  sentinel-2:
-    adapter: stac-cog
-    stacApiUrl: https://planetarycomputer.microsoft.com/api/stac/v1
-    collection: sentinel-2-l2a
-    asset: visual
-
 extracts:
-  # → output/overture/{type}.parquet  (building, place, segment, ...)
   - source: overture
 
-  # → output/osm-jp/osm-jp.pmtiles
-  - source: osm-jp
+  - source: osm-jp-pmtiles
 
-  # → output/osm-kanto/osm-kanto.osm.pbf
-  - source: osm-kanto
-
-  # → output/sentinel-2/sentinel-2.tif
-  - source: sentinel-2
+  - source: sentinel-2-pc
     datetime: "2025-09-01/2025-11-30"
     maxCloudCover: 20
 
-  # --- example: same source, different extract id and time range ---
+  # Geofabrik requires a region, so define it in sources:
+  # sources:
+  #   osm-kanto:
+  #     adapter: geofabrik
+  #     region: kanto
+  # extracts:
+  #   - source: osm-kanto
+
+  # Same source, different time range → use explicit id to avoid collision
   # - id: sentinel-2-winter
-  #   source: sentinel-2
+  #   source: sentinel-2-pc
   #   datetime: "2026-01-01/2026-03-31"
   #   maxCloudCover: 30
-
-  # --- example: explicit outputs override ---
-  # - id: buildings-only
-  #   source: overture
-  #   outputs:
-  #     - format: geoparquet
-  #       path: buildings.parquet
