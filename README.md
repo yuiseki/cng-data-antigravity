@@ -28,7 +28,7 @@ Cloud-Native Geospatial (CNG) data sources provide mechanisms that counteract da
 
 Not all sources use the same mechanism:
 
-- **HTTP range requests**: PMTiles, GeoParquet, and Cloud-Optimized GeoTIFF (COG) expose internal tile or row-group indexes, so a client can fetch only the bytes covering a specific bbox without downloading the whole file.
+- **HTTP range requests**: PMTiles and COG expose internal tile indexes, while GeoParquet can use partitioning, row-group metadata, and spatially sorted layouts to avoid scanning unrelated bytes. Together, these mechanisms let a client fetch or scan only the portions relevant to a specific AOI instead of downloading the whole dataset.
 - **Spatiotemporal catalogs**: STAC (SpatioTemporal Asset Catalog) lets you search by bbox, datetime, and cloud cover to discover exactly which assets are relevant, then download only those.
 - **Regional extracts**: OSM PBF files must be downloaded in full, but Geofabrik publishes pre-split regional extracts (country, prefecture, ...) that already reduce the scope before a local bbox clip.
 
@@ -63,7 +63,14 @@ cd cng-data-antigravity
 uv sync
 ```
 
-Dependencies: `overturemaps`, `pmtiles`, `PyYAML`, `osmium`, `pystac-client`, `gdal`
+Dependencies: `overturemaps`, `pmtiles`, `PyYAML`, `osmium`, `pystac-client`
+
+**STAC COG support** requires GDAL, which must match your system's `libgdal` version exactly. Pre-built wheels are not available on PyPI, so install it separately after `uv sync`:
+
+```bash
+sudo apt-get install libgdal-dev gdal-bin   # or equivalent for your OS
+uv pip install "GDAL==$(gdal-config --version)"
+```
 
 ## Usage
 
