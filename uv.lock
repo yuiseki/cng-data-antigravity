@@ -126,7 +126,6 @@ name = "cng-data-antigravity"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "gdal" },
     { name = "osmium" },
     { name = "overturemaps" },
     { name = "pmtiles" },
@@ -138,10 +137,13 @@ dependencies = [
 dev = [
     { name = "pytest" },
 ]
+stac = [
+    { name = "gdal" },
+]
 
 [package.metadata]
 requires-dist = [
-    { name = "gdal" },
+    { name = "gdal", marker = "extra == 'stac'" },
     { name = "osmium", specifier = ">=4.0.0" },
     { name = "overturemaps", specifier = ">=1.0.0" },
     { name = "pmtiles", specifier = ">=3.7.0" },
@@ -149,7 +151,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pyyaml", specifier = ">=6.0" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["stac", "dev"]
 
 [[package]]
 name = "colorama"

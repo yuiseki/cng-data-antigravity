@@ -7,12 +7,9 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 import pystac_client
-from osgeo import gdal
 
 from cng_data_antigravity.adapters.common import utc_now
 from cng_data_antigravity.config import AOIConfig, OutputConfig
-
-gdal.UseExceptions()
 
 
 def _search_stac(source: dict[str, Any], aoi: AOIConfig) -> Any:
@@ -44,6 +41,14 @@ def _sign_href(href: str, stac_api_url: str) -> str:
 
 
 def _gdal_translate_bbox(src_href: str, dest: Path, bbox: list[float]) -> None:
+    try:
+        from osgeo import gdal  # noqa: PLC0415
+    except ImportError as exc:
+        raise ImportError(
+            "osgeo.gdal is required for the stac-cog adapter. "
+            "Install it with: pip install \"GDAL==$(gdal-config --version)\""
+        ) from exc
+    gdal.UseExceptions()
     west, south, east, north = bbox
     opts = gdal.TranslateOptions(
         format="GTiff",
