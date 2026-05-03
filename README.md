@@ -14,15 +14,33 @@ An `escape.yaml` file describes what to extract and from where. The tool checks 
 
 ### Data gravity
 
-Large datasets attract applications, pipelines, and compute toward the cloud where they reside. Moving data out is expensive — in bandwidth, time, and tooling. This pull is **data gravity**.
+Large datasets attract applications, pipelines, and compute toward the cloud where they reside. Moving data out is expensive:
 
-Geospatial data is especially heavy. Planet-scale vector tiles, global OSM extracts, and satellite imagery archives can run into hundreds of gigabytes. Gravity keeps them in the cloud.
+- bandwidth
+- time
+- tooling
+
+This pull is **data gravity**. Geospatial data is especially heavy. Planet-scale vector tiles, global OSM extracts, and satellite imagery archives can run into hundreds of gigabytes. Gravity keeps them in the cloud.
 
 ### CNG Data antigravity
 
-Cloud-Native Geospatial (CNG) formats — PMTiles, GeoParquet, Cloud-Optimized GeoTIFF, and OSM PBF served over HTTP range requests — are designed to be read remotely. But they also enable a different pattern: **extract only the slice you need and land it locally**.
+Cloud-Native Geospatial (CNG) formats are designed to be read remotely via HTTP range requests:
 
-`cng-data-antigravity` provides the escape velocity. You declare an area of interest (AOI) and a list of sources. The tool checks freshness, fetches only what changed, clips to your bbox, and writes reproducible local outputs. The data escapes the cloud — without pulling the whole planet down with it.
+- PMTiles
+- GeoParquet
+- Cloud-Optimized GeoTIFF (COG)
+- OSM PBF
+
+But they also enable a different pattern: **extract only the slice you need and land it locally**.
+
+`cng-data-antigravity` provides the escape velocity. You declare an area of interest (AOI) and a list of sources. The tool:
+
+1. checks source freshness
+2. fetches only what changed
+3. clips to your bbox
+4. writes reproducible local outputs
+
+The data escapes the cloud, without pulling the whole planet down with it.
 
 ## Naming contract
 
@@ -76,7 +94,7 @@ extracts:
 
 - `outputs` is optional. Defaults: `output/{id}/{id}.{ext}`, or `output/{id}/{type}.parquet` for multi-type Overture extracts.
 - `id` is optional. Defaults to the source name.
-- Per-extract overrides (e.g. `datetime`, `maxCloudCover`, `overtureType`) are written directly under the extract — no nesting required.
+- Per-extract overrides (e.g. `datetime`, `maxCloudCover`, `overtureType`) are written directly under the extract (no nesting required).
 
 ### Custom sources
 
@@ -104,27 +122,27 @@ extracts:
 
 ### Built-in sources
 
-| Source name | Adapter | Description |
-|---|---|---|
-| `overture` | `overture` | Overture Maps — all themes → `{type}.parquet` |
-| `osm-jp-pmtiles` | `pmtiles` | OSM Japan PMTiles (tile.openstreetmap.jp) |
-| `mapterhorn-pmtiles` | `pmtiles` | Global OSM vector tiles (Mapterhorn planet.pmtiles, zoom 0–12) |
-| `sentinel-2-pc` | `stac-cog` | Sentinel-2 L2A via Microsoft Planetary Computer |
-| `osm-japan` | `osm-pbf` | Geofabrik — Japan |
-| `osm-kanto` | `osm-pbf` | Geofabrik — Kanto |
-| `osm-kansai` | `osm-pbf` | Geofabrik — Kansai |
-| `osm-chubu` | `osm-pbf` | Geofabrik — Chubu |
-| `osm-kyushu` | `osm-pbf` | Geofabrik — Kyushu |
-| `osm-tohoku` | `osm-pbf` | Geofabrik — Tohoku |
-| `osm-hokkaido` | `osm-pbf` | Geofabrik — Hokkaido |
-| `osm-asia` | `osm-pbf` | Geofabrik — Asia |
-| `osm-europe` | `osm-pbf` | Geofabrik — Europe |
-| `osm-north-america` | `osm-pbf` | Geofabrik — North America |
-| `osm-germany` | `osm-pbf` | Geofabrik — Germany |
-| `osm-france` | `osm-pbf` | Geofabrik — France |
-| `osm-great-britain` | `osm-pbf` | Geofabrik — Great Britain |
-| `osm-monaco` | `osm-pbf` | Geofabrik — Monaco (~663 KB, suitable for E2E testing) |
-| `osm-niue` | `osm-pbf` | Geofabrik — Niue (~412 KB, suitable for E2E testing) |
+| Source name | Adapter | Provider | Region / Notes |
+|---|---|---|---|
+| `overture` | `overture` | Overture Maps | all themes → `{type}.parquet` |
+| `osm-jp-pmtiles` | `pmtiles` | tile.openstreetmap.jp | Japan planet PMTiles |
+| `mapterhorn-pmtiles` | `pmtiles` | Mapterhorn | global planet PMTiles (zoom 0–12) |
+| `sentinel-2-pc` | `stac-cog` | Microsoft Planetary Computer | Sentinel-2 L2A |
+| `osm-japan` | `osm-pbf` | Geofabrik | Japan |
+| `osm-kanto` | `osm-pbf` | Geofabrik | Kanto |
+| `osm-kansai` | `osm-pbf` | Geofabrik | Kansai |
+| `osm-chubu` | `osm-pbf` | Geofabrik | Chubu |
+| `osm-kyushu` | `osm-pbf` | Geofabrik | Kyushu |
+| `osm-tohoku` | `osm-pbf` | Geofabrik | Tohoku |
+| `osm-hokkaido` | `osm-pbf` | Geofabrik | Hokkaido |
+| `osm-asia` | `osm-pbf` | Geofabrik | Asia |
+| `osm-europe` | `osm-pbf` | Geofabrik | Europe |
+| `osm-north-america` | `osm-pbf` | Geofabrik | North America |
+| `osm-germany` | `osm-pbf` | Geofabrik | Germany |
+| `osm-france` | `osm-pbf` | Geofabrik | France |
+| `osm-great-britain` | `osm-pbf` | Geofabrik | Great Britain |
+| `osm-monaco` | `osm-pbf` | Geofabrik | Monaco (~663 KB, good for E2E testing) |
+| `osm-niue` | `osm-pbf` | Geofabrik | Niue (~412 KB, good for E2E testing) |
 
 ### Adapters
 
