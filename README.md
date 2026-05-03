@@ -24,7 +24,7 @@ This pull is **data gravity**. Geospatial data is especially heavy. Planet-scale
 
 ### CNG Data antigravity
 
-Cloud-Native Geospatial (CNG) sources provide mechanisms that counteract data gravity. Not all sources use the same mechanism:
+Cloud-Native Geospatial (CNG) sources provide mechanisms that counteract data gravity, and they carry the hidden properties of data antigravity. Not all sources use the same mechanism:
 
 - **HTTP range requests**: PMTiles, GeoParquet, and Cloud-Optimized GeoTIFF (COG) expose internal tile or row-group indexes, so a client can fetch only the bytes covering a specific bbox without downloading the whole file.
 - **Spatiotemporal catalogs**: STAC (SpatioTemporal Asset Catalog) lets you search by bbox, datetime, and cloud cover to discover exactly which assets are relevant, then download only those.
