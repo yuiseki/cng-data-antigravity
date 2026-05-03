@@ -27,8 +27,11 @@ def test_default_outputs_pmtiles():
     assert outputs[0].path == "osm-jp.pmtiles"
 
 
-def test_default_outputs_geofabrik():
-    outputs = default_outputs({"type": "geofabrik", "region": "kanto"}, "kanto")
+def test_default_outputs_osm_pbf():
+    outputs = default_outputs(
+        {"type": "osm-pbf", "indexUrl": "https://download.geofabrik.de/index-v1.json", "region": "kanto"},
+        "kanto",
+    )
     assert len(outputs) == 1
     assert outputs[0].format == "osm.pbf"
     assert outputs[0].path == "kanto.osm.pbf"

@@ -12,7 +12,7 @@ DEFAULT_CONFIG_NAME = "escape.yaml"
 _DEFAULT_FORMAT: dict[str, str] = {
     "overture": "geoparquet",
     "pmtiles": "pmtiles",
-    "geofabrik": "osm.pbf",
+    "osm-pbf": "osm.pbf",
     "stac-cog": "geotiff",
 }
 

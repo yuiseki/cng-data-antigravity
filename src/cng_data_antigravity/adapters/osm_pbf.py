@@ -1,7 +1,14 @@
+"""osm-pbf adapter: download an OSM PBF file and extract a bbox subset with osmium.
+
+Source config accepts either:
+  url       — direct URL to a .osm.pbf file
+  indexUrl + region — resolve URL via a GeoJSON index (Geofabrik style)
+"""
 from __future__ import annotations
 
 import json
 import shutil
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -13,16 +20,25 @@ import osmium.osm
 from cng_data_antigravity.adapters.common import head, utc_now
 from cng_data_antigravity.config import AOIConfig, OutputConfig
 
-GEOFABRIK_INDEX_URL = "https://download.geofabrik.de/index-v1.json"
 
-
-def _fetch_pbf_url(region: str) -> str:
-    with urlopen(GEOFABRIK_INDEX_URL, timeout=30) as response:
+def _resolve_pbf_url(source: dict[str, Any]) -> str:
+    if "url" in source:
+        return source["url"]
+    index_url = source["indexUrl"]
+    region = source["region"]
+    with urlopen(index_url, timeout=30) as response:
         index = json.load(response)
     feature = next((f for f in index["features"] if f["properties"]["id"] == region), None)
     if feature is None:
-        raise ValueError(f'Geofabrik region "{region}" not found')
+        raise ValueError(f'region "{region}" not found in {index_url}')
     return feature["properties"]["urls"]["pbf"]
+
+
+def _cache_key(source: dict[str, Any]) -> str:
+    if "url" in source:
+        # Derive a filename from the URL path
+        return Path(urllib.parse.urlparse(source["url"]).path).stem
+    return source["region"]
 
 
 def _download_pbf(url: str, dest: Path) -> None:
@@ -33,10 +49,9 @@ def _download_pbf(url: str, dest: Path) -> None:
 
 
 def _osmium_extract(src: Path, dest: Path, bbox: list[float]) -> None:
-    """Extract OSM data within bbox using BackReferenceWriter (complete_ways equivalent)."""
+    """Extract OSM data within bbox (complete_ways equivalent via BackReferenceWriter)."""
     west, south, east, north = bbox
     box = osmium.osm.Box(west, south, east, north)
-
     with osmium.BackReferenceWriter(dest, ref_src=src, overwrite=True) as writer:
         for obj in osmium.FileProcessor(src):
             if isinstance(obj, osmium.osm.Node):
@@ -45,7 +60,7 @@ def _osmium_extract(src: Path, dest: Path, bbox: list[float]) -> None:
                     writer.add(obj)
 
 
-def run_geofabrik_extract(
+def run_osm_pbf_extract(
     source: dict[str, Any],
     aoi: AOIConfig,
     output: OutputConfig,
@@ -55,23 +70,25 @@ def run_geofabrik_extract(
     work_dir: Path,
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
     if output.format != "osm.pbf":
-        raise ValueError("geofabrik source only supports osm.pbf output")
+        raise ValueError("osm-pbf adapter only supports osm.pbf output")
 
-    pbf_url = _fetch_pbf_url(source["region"])
+    pbf_url = _resolve_pbf_url(source)
     headers = head(pbf_url)
-    source_info = {
-        "type": "geofabrik",
-        "region": source["region"],
+    source_info: dict[str, Any] = {
+        "type": "osm-pbf",
         "pbfUrl": pbf_url,
         "lastModified": headers.get("last-modified", ""),
         "etag": headers.get("etag", ""),
         "contentLength": headers.get("content-length", ""),
         "checkedAt": utc_now(),
     }
+    if "region" in source:
+        source_info["region"] = source["region"]
 
-    cache_dir = work_dir / ".cache" / "geofabrik"
+    cache_key = _cache_key(source)
+    cache_dir = work_dir / ".cache" / "osm-pbf"
     cache_dir.mkdir(parents=True, exist_ok=True)
-    intermediate = cache_dir / f'{source["region"]}-latest.osm.pbf'
+    intermediate = cache_dir / f"{cache_key}-latest.osm.pbf"
 
     prev_info = (prev_meta or {}).get("sourceInfo") or {}
     changed = (
@@ -83,11 +100,11 @@ def run_geofabrik_extract(
     )
 
     if changed:
-        print(f"  [geofabrik] downloading {pbf_url} -> {intermediate}")
+        print(f"  [osm-pbf] downloading {pbf_url} -> {intermediate}")
         _download_pbf(pbf_url, intermediate)
 
     if force or changed or not output_path.exists():
-        print(f"  [geofabrik] extracting bbox={aoi.bbox} -> {output_path}")
+        print(f"  [osm-pbf] extracting bbox={aoi.bbox} -> {output_path}")
         _osmium_extract(intermediate, output_path, aoi.bbox)
 
     return source_info, None

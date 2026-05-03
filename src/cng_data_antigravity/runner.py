@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from cng_data_antigravity.adapters import (
-    run_geofabrik_extract,
+    run_osm_pbf_extract,
     run_overture_extract,
     run_pmtiles_extract,
     run_stac_cog_extract,
@@ -18,7 +18,7 @@ Handler = Callable[..., tuple[dict[str, Any] | None, dict[str, Any] | None]]
 SOURCE_HANDLERS: dict[str, Handler] = {
     "overture": run_overture_extract,
     "pmtiles": run_pmtiles_extract,
-    "geofabrik": run_geofabrik_extract,
+    "osm-pbf": run_osm_pbf_extract,
     "stac-cog": run_stac_cog_extract,
 }
 
@@ -30,7 +30,6 @@ def run_escape(config: EscapeConfig, *, config_path: Path, force: bool = False) 
         adapter = effective_source["type"]
         started_at = datetime.now(timezone.utc)
 
-        # Convention: metadata at output/{extract.id}/metadata.json
         output_dir = work_dir / "output" / extract.id
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -40,8 +39,7 @@ def run_escape(config: EscapeConfig, *, config_path: Path, force: bool = False) 
             raise ValueError(f"unknown adapter type: {adapter!r}")
 
         outputs = extract.outputs or default_outputs(effective_source, extract.id)
-
-        resolved_outputs = outputs  # keep reference for metadata
+        resolved_outputs = outputs
         resolved_output_paths: list[str] = []
         source_info: dict[str, Any] | None = None
         source_state: dict[str, Any] | None = None
@@ -58,7 +56,7 @@ def run_escape(config: EscapeConfig, *, config_path: Path, force: bool = False) 
                 source_info, source_state = handler(
                     effective_source, config.aoi, output, output_path, force, prev_meta,
                 )
-            elif adapter == "geofabrik":
+            elif adapter == "osm-pbf":
                 source_info, source_state = handler(
                     effective_source, config.aoi, output, output_path, force, prev_meta, work_dir,
                 )

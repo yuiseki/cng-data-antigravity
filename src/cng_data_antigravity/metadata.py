@@ -11,7 +11,7 @@ from cng_data_antigravity.config import AOIConfig, ExtractConfig
 DEFAULT_ATTRIBUTION: dict[str, str] = {
     "overture": "© Overture Maps Foundation contributors, available under CDLA Permissive 2.0",
     "pmtiles": "© OpenStreetMap contributors, available under ODbL",
-    "geofabrik": "© OpenStreetMap contributors, available under ODbL. Data provided by Geofabrik GmbH.",
+    "osm-pbf": "© OpenStreetMap contributors, available under ODbL",
     "stac-cog": "Contains modified Copernicus Sentinel data. Accessed via Microsoft Planetary Computer.",
 }
 
