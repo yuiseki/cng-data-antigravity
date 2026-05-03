@@ -34,8 +34,6 @@ Each mechanism gives you a way to pull **only what you need** out of a planet-sc
 
 `cng-data-antigravity` abstracts over all of them. You declare an area of interest (AOI) and a list of sources. The tool:
 
-`cng-data-antigravity` provides the escape velocity. You declare an area of interest (AOI) and a list of sources. The tool:
-
 1. checks source freshness
 2. fetches only what changed
 3. clips to your bbox
