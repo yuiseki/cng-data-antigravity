@@ -30,6 +30,8 @@ def write_metadata(
     aoi: AOIConfig,
     output_dir: Path,
     resolved_output_paths: list[str],
+    resolved_outputs: list[Any],
+    effective_source: dict[str, Any],
     started_at: datetime,
     completed_at: datetime,
     source_info: dict[str, Any] | None = None,
@@ -40,15 +42,15 @@ def write_metadata(
         "id": extract.id,
         "extractedAt": completed_at.astimezone(timezone.utc).isoformat(),
         "durationSeconds": round((completed_at - started_at).total_seconds(), 3),
-        "source": extract.source,
+        "source": effective_source,
         "sourceInfo": source_info,
         "sourceState": source_state,
         "aoi": asdict(aoi),
         "outputs": [
             {"format": output.format, "path": path}
-            for output, path in zip(extract.outputs, resolved_output_paths, strict=False)
+            for output, path in zip(resolved_outputs, resolved_output_paths, strict=False)
         ],
-        "attribution": extract.attribution or DEFAULT_ATTRIBUTION.get(extract.source["type"], ""),
+        "attribution": extract.attribution or DEFAULT_ATTRIBUTION.get(effective_source.get("type", ""), ""),
     }
     (output_dir / "metadata.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),

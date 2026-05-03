@@ -1,62 +1,67 @@
 # escape.yaml — CNG Data Antigravity configuration
 #
-# Required fields: aoi.bbox, extracts[].id, extracts[].source
-# outputs is optional. When omitted, defaults to:
-#   output/{source_type}/{id}.{ext}          (single output)
-#   output/{source_type}/{id}/{type}.parquet  (overture multi-type)
-# metadata.json is always written to output/{source_type}/{id}/metadata.json
+# sources:  Named data source definitions (adapter + config).
+#           Reusable across multiple extracts or escape files.
+#
+# extracts: What to extract for this AOI.
+#           source: <source-name>   — reference to a named source
+#           id: <name>              — optional; defaults to source name
+#           <key>: <value>          — per-extract overrides (e.g. datetime for stac-cog)
+#
+# outputs:  Optional. When omitted, defaults to:
+#             output/{id}/{id}.{ext}          (single output)
+#             output/{id}/{type}.parquet      (overture, all types)
+#           metadata.json is always written to output/{id}/metadata.json
 
 aoi:
   bbox: [139.56, 35.52, 139.92, 35.82]  # [west, south, east, north]
 
+sources:
+  # Overture Maps (all themes by default)
+  overture:
+    adapter: overture
+
+  # OpenStreetMap Japan — PMTiles
+  osm-jp:
+    adapter: pmtiles
+    url: https://tile.openstreetmap.jp/static/planet.pmtiles
+
+  # Geofabrik — Kanto region OSM PBF
+  osm-kanto:
+    adapter: geofabrik
+    region: kanto
+
+  # Sentinel-2 L2A via Microsoft Planetary Computer
+  sentinel-2:
+    adapter: stac-cog
+    stacApiUrl: https://planetarycomputer.microsoft.com/api/stac/v1
+    collection: sentinel-2-l2a
+    asset: visual
+
 extracts:
-  # Overture Maps — multiple themes, one file per type
-  # → output/overture/overture-tokyo/{type}.parquet
-  - id: overture-tokyo
-    source:
-      type: overture
-      overtureTypes:
-        - building
-        - place
-        - segment
-        - connector
-        - infrastructure
-        - land
-        - land_cover
-        - land_use
-        - water
-        - division
+  # → output/overture/{type}.parquet  (building, place, segment, ...)
+  - source: overture
 
-  # PMTiles subset extract
-  # → output/pmtiles/osm-jp.pmtiles
-  - id: osm-jp
-    source:
-      type: pmtiles
-      url: https://tile.openstreetmap.jp/static/planet.pmtiles
+  # → output/osm-jp/osm-jp.pmtiles
+  - source: osm-jp
 
-  # Geofabrik OSM PBF bbox extract
-  # → output/geofabrik/kanto.osm.pbf
-  - id: kanto
-    source:
-      type: geofabrik
-      region: kanto
+  # → output/osm-kanto/osm-kanto.osm.pbf
+  - source: osm-kanto
 
-  # STAC + COG — Sentinel-2 true color, lowest cloud cover in datetime range
-  # → output/stac-cog/sentinel2-tokyo.tif
-  - id: sentinel2-tokyo
-    source:
-      type: stac-cog
-      stacApiUrl: https://planetarycomputer.microsoft.com/api/stac/v1
-      collection: sentinel-2-l2a
-      asset: visual
-      datetime: "2025-09-01/2025-11-30"
-      maxCloudCover: 20
+  # → output/sentinel-2/sentinel-2.tif
+  - source: sentinel-2
+    datetime: "2025-09-01/2025-11-30"
+    maxCloudCover: 20
 
-  # --- explicit outputs example (override convention) ---
-  # - id: buildings-custom
-  #   source:
-  #     type: overture
-  #     overtureType: building
+  # --- example: same source, different extract id and time range ---
+  # - id: sentinel-2-winter
+  #   source: sentinel-2
+  #   datetime: "2026-01-01/2026-03-31"
+  #   maxCloudCover: 30
+
+  # --- example: explicit outputs override ---
+  # - id: buildings-only
+  #   source: overture
   #   outputs:
   #     - format: geoparquet
-  #       path: my-buildings.parquet
+  #       path: buildings.parquet

@@ -55,4 +55,5 @@ def test_default_outputs_overture_multi_type():
     )
     assert len(outputs) == 1
     assert outputs[0].format == "geoparquet"
-    assert outputs[0].path == "overture-tokyo/{type}.parquet"
+    # extract_id is the directory; path is relative to output_dir, so just {type}.parquet
+    assert outputs[0].path == "{type}.parquet"

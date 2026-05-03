@@ -36,10 +36,9 @@ extracts:
     finally:
         SOURCE_HANDLERS.pop("dummy", None)
 
-    # Convention: output/{source_type}/{id}/  for metadata,  output/{source_type}/{id}.{ext} for data
-    # Explicit outputs are relative to output/{source_type}/{id}/, so demo.parquet → that dir
-    output_file = tmp_path / "output" / "dummy" / "demo" / "demo.parquet"
-    metadata_file = tmp_path / "output" / "dummy" / "demo" / "metadata.json"
+    # Convention: output/{extract.id}/ for both data and metadata
+    output_file = tmp_path / "output" / "demo" / "demo.parquet"
+    metadata_file = tmp_path / "output" / "demo" / "metadata.json"
     assert output_file.exists()
     assert metadata_file.exists()
     metadata = json.loads(metadata_file.read_text(encoding="utf-8"))
