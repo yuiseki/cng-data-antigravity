@@ -10,6 +10,20 @@
 
 An `escape.yaml` file describes what to extract and from where. The tool checks source freshness, downloads only what changed, extracts an AOI-sized subset, and writes reproducible local outputs alongside a `metadata.json`.
 
+## Key concepts
+
+### Data gravity
+
+Large datasets attract applications, pipelines, and compute toward the cloud where they reside. Moving data out is expensive — in bandwidth, time, and tooling. This pull is **data gravity**.
+
+Geospatial data is especially heavy. Planet-scale vector tiles, global OSM extracts, and satellite imagery archives can run into hundreds of gigabytes. Gravity keeps them in the cloud.
+
+### CNG Data antigravity
+
+Cloud-Native Geospatial (CNG) formats — PMTiles, GeoParquet, Cloud-Optimized GeoTIFF, and OSM PBF served over HTTP range requests — are designed to be read remotely. But they also enable a different pattern: **extract only the slice you need and land it locally**.
+
+`cng-data-antigravity` provides the escape velocity. You declare an area of interest (AOI) and a list of sources. The tool checks freshness, fetches only what changed, clips to your bbox, and writes reproducible local outputs. The data escapes the cloud — without pulling the whole planet down with it.
+
 ## Naming contract
 
 | | |
