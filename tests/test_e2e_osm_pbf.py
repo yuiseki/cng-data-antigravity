@@ -1,127 +1,60 @@
-"""E2E tests for the osm-pbf adapter using small Geofabrik regions.
+"""True E2E tests for the osm-pbf adapter.
 
-Monaco (~663 KB PBF) and Niue (~412 KB PBF) are the smallest regions
-available on Geofabrik, making them suitable for fast end-to-end tests
-that exercise the full download → bbox extract pipeline.
+Each network test writes an escape.yaml, invokes the CLI as a subprocess
+(`cng-data-antigravity run <escape.yaml>`), and asserts on the resulting
+output files and metadata.json — no Python API is called directly.
 
-These tests make real network requests and are skipped when the
-SKIP_NETWORK_TESTS environment variable is set.
+Monaco (~663 KB PBF) and Niue (~412 KB PBF) are the smallest regions on
+Geofabrik, keeping download time short.
+
+Note: freshness-skip behaviour (second run does not re-download when source
+is unchanged) is covered by unit tests in test_osm_pbf_adapter.py, not here,
+because it requires mocking HEAD responses to guarantee stable server state.
+
+Skip all network tests with:  SKIP_NETWORK_TESTS=1 pytest
 """
 from __future__ import annotations
 
+import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
-from cng_data_antigravity.adapters.osm_pbf import run_osm_pbf_extract
-from cng_data_antigravity.config import AOIConfig, OutputConfig, load_config
-from cng_data_antigravity.runner import run_escape
 from cng_data_antigravity.sources import BUILTIN_SOURCES
+
+_CLI = Path(sys.executable).parent / "cng-data-antigravity"
 
 network = pytest.mark.skipif(
     os.environ.get("SKIP_NETWORK_TESTS") == "1",
     reason="SKIP_NETWORK_TESTS=1",
 )
 
-# Monaco bbox (entire principality, ~2 km²)
 _MONACO_BBOX = [7.39, 43.72, 7.44, 43.76]
-# Niue bbox (entire island, ~260 km²)
 _NIUE_BBOX = [-169.97, -19.18, -169.78, -18.93]
 
 
-@network
-def test_osm_pbf_monaco_downloads_and_extracts(tmp_path: Path) -> None:
-    """Full pipeline: resolve Geofabrik index → download Monaco PBF → bbox extract."""
-    source = {
-        "type": "osm-pbf",
-        "indexUrl": "https://download.geofabrik.de/index-v1.json",
-        "region": "monaco",
-    }
-    output_path = tmp_path / "monaco.osm.pbf"
-
-    source_info, _ = run_osm_pbf_extract(
-        source,
-        AOIConfig(bbox=_MONACO_BBOX),
-        OutputConfig(format="osm.pbf", path="monaco.osm.pbf"),
-        output_path,
-        force=False,
-        prev_meta=None,
-        work_dir=tmp_path,
+def _run_cli(escape_yaml: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [_CLI, "run", str(escape_yaml)],
+        capture_output=True,
+        text=True,
     )
 
-    assert output_path.exists(), "output file was not created"
-    assert output_path.stat().st_size > 0, "output file is empty"
-    assert source_info["type"] == "osm-pbf"
-    assert source_info["region"] == "monaco"
-    assert "pbfUrl" in source_info
-    assert "monaco" in source_info["pbfUrl"]
-    # Cache file must also exist
-    cache = tmp_path / ".cache" / "osm-pbf" / "monaco-latest.osm.pbf"
-    assert cache.exists()
 
+# ---------------------------------------------------------------------------
+# Built-in source registration (no network needed)
+# ---------------------------------------------------------------------------
 
-@network
-def test_osm_pbf_niue_downloads_and_extracts(tmp_path: Path) -> None:
-    """Full pipeline for Niue — smallest available Geofabrik region (~412 KB)."""
-    source = {
-        "type": "osm-pbf",
-        "indexUrl": "https://download.geofabrik.de/index-v1.json",
-        "region": "niue",
-    }
-    output_path = tmp_path / "niue.osm.pbf"
-
-    source_info, _ = run_osm_pbf_extract(
-        source,
-        AOIConfig(bbox=_NIUE_BBOX),
-        OutputConfig(format="osm.pbf", path="niue.osm.pbf"),
-        output_path,
-        force=False,
-        prev_meta=None,
-        work_dir=tmp_path,
-    )
-
-    assert output_path.exists()
-    assert output_path.stat().st_size > 0
-    assert source_info["region"] == "niue"
-
-
-@network
-def test_osm_pbf_skips_download_when_source_unchanged(tmp_path: Path) -> None:
-    """Second run with unchanged source must not re-download the PBF."""
-    source = {
-        "type": "osm-pbf",
-        "indexUrl": "https://download.geofabrik.de/index-v1.json",
-        "region": "monaco",
-    }
-    aoi = AOIConfig(bbox=_MONACO_BBOX)
-    output_cfg = OutputConfig(format="osm.pbf", path="monaco.osm.pbf")
-    output_path = tmp_path / "monaco.osm.pbf"
-
-    # First run — downloads
-    source_info, _ = run_osm_pbf_extract(
-        source, aoi, output_cfg, output_path, force=False, prev_meta=None, work_dir=tmp_path,
-    )
-    cache = tmp_path / ".cache" / "osm-pbf" / "monaco-latest.osm.pbf"
-    mtime_after_first = cache.stat().st_mtime_ns
-
-    # Second run — same etag/lastModified → must skip download
-    run_osm_pbf_extract(
-        source, aoi, output_cfg, output_path, force=False, prev_meta={"sourceInfo": source_info}, work_dir=tmp_path,
-    )
-    assert cache.stat().st_mtime_ns == mtime_after_first, "cache file was re-downloaded on second run"
-
-
-@network
 def test_builtin_source_osm_monaco_is_registered() -> None:
-    """osm-monaco must be in BUILTIN_SOURCES and resolve to osm-pbf adapter."""
     assert "osm-monaco" in BUILTIN_SOURCES
     src = BUILTIN_SOURCES["osm-monaco"]
     assert src.adapter == "osm-pbf"
     assert src.config["region"] == "monaco"
 
 
-@network
 def test_builtin_source_osm_niue_is_registered() -> None:
     assert "osm-niue" in BUILTIN_SOURCES
     src = BUILTIN_SOURCES["osm-niue"]
@@ -129,23 +62,74 @@ def test_builtin_source_osm_niue_is_registered() -> None:
     assert src.config["region"] == "niue"
 
 
+# ---------------------------------------------------------------------------
+# True E2E: CLI subprocess → escape.yaml → output files
+# ---------------------------------------------------------------------------
+
 @network
-def test_e2e_monaco_via_escape_yaml(tmp_path: Path) -> None:
-    """Full escape.yaml → run_escape pipeline for Monaco."""
+def test_e2e_cli_monaco(tmp_path: Path) -> None:
+    """cng-data-antigravity run escape.yaml → output/osm-monaco/ for Monaco."""
     escape_yaml = tmp_path / "escape.yaml"
     escape_yaml.write_text(
-        "aoi:\n"
-        f"  bbox: {_MONACO_BBOX}\n"
-        "extracts:\n"
-        "  - source: osm-monaco\n",
+        f"aoi:\n  bbox: {_MONACO_BBOX}\nextracts:\n  - source: osm-monaco\n",
         encoding="utf-8",
     )
 
-    config = load_config(escape_yaml)
-    run_escape(config, config_path=escape_yaml)
+    result = _run_cli(escape_yaml)
+    assert result.returncode == 0, f"CLI failed:\n{result.stderr}"
 
     output = tmp_path / "output" / "osm-monaco" / "osm-monaco.osm.pbf"
-    metadata = tmp_path / "output" / "osm-monaco" / "metadata.json"
+    metadata_path = tmp_path / "output" / "osm-monaco" / "metadata.json"
     assert output.exists(), f"output not found: {output}"
     assert output.stat().st_size > 0
-    assert metadata.exists()
+
+    meta = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert meta["id"] == "osm-monaco"
+    assert meta["source"]["type"] == "osm-pbf"
+    assert meta["source"]["region"] == "monaco"
+    assert len(meta["outputs"]) == 1
+    assert meta["outputs"][0]["format"] == "osm.pbf"
+    assert meta["sourceInfo"]["pbfUrl"].endswith("monaco-latest.osm.pbf")
+
+
+@network
+def test_e2e_cli_niue(tmp_path: Path) -> None:
+    """cng-data-antigravity run escape.yaml → output/osm-niue/ for Niue."""
+    escape_yaml = tmp_path / "escape.yaml"
+    escape_yaml.write_text(
+        f"aoi:\n  bbox: {_NIUE_BBOX}\nextracts:\n  - source: osm-niue\n",
+        encoding="utf-8",
+    )
+
+    result = _run_cli(escape_yaml)
+    assert result.returncode == 0, f"CLI failed:\n{result.stderr}"
+
+    output = tmp_path / "output" / "osm-niue" / "osm-niue.osm.pbf"
+    metadata_path = tmp_path / "output" / "osm-niue" / "metadata.json"
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+    meta = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert meta["id"] == "osm-niue"
+    assert meta["source"]["region"] == "niue"
+    assert meta["sourceInfo"]["pbfUrl"].endswith("niue-latest.osm.pbf")
+
+
+@network
+def test_e2e_cli_second_run_is_idempotent(tmp_path: Path) -> None:
+    """Second CLI run exits 0 and produces the same output file."""
+    escape_yaml = tmp_path / "escape.yaml"
+    escape_yaml.write_text(
+        f"aoi:\n  bbox: {_MONACO_BBOX}\nextracts:\n  - source: osm-monaco\n",
+        encoding="utf-8",
+    )
+
+    result1 = _run_cli(escape_yaml)
+    assert result1.returncode == 0, result1.stderr
+
+    output = tmp_path / "output" / "osm-monaco" / "osm-monaco.osm.pbf"
+    size_after_first = output.stat().st_size
+
+    result2 = _run_cli(escape_yaml)
+    assert result2.returncode == 0, result2.stderr
+    assert output.stat().st_size == size_after_first
