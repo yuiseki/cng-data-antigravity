@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cng-data-antigravity"
+version = "0.1.0"
+description = "Data antigravity for Cloud-Native Geospatial data sources"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [
+  { name = "Yuiseki" }
+]
+dependencies = [
+  "PyYAML>=6.0",
+]
+
+[project.scripts]
+cng-data-antigravity = "cng_data_antigravity.cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cng_data_antigravity"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
