@@ -10,7 +10,7 @@ from cng_data_antigravity.adapters import (
     run_pmtiles_extract,
     run_stac_cog_extract,
 )
-from cng_data_antigravity.config import EscapeConfig, OutputConfig
+from cng_data_antigravity.config import EscapeConfig
 from cng_data_antigravity.metadata import read_prev_metadata, write_metadata
 
 Handler = Callable[..., tuple[dict[str, Any] | None, dict[str, Any] | None]]

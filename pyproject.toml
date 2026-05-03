@@ -13,6 +13,7 @@ authors = [
   { name = "Yuiseki" }
 ]
 dependencies = [
+  "overturemaps>=1.0.0",
   "PyYAML>=6.0",
 ]
 

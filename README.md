@@ -42,5 +42,6 @@ If the config path is omitted, `cng-data-antigravity` looks for `escape.yaml` in
 This is the Python rewrite of the original PoC. It is intentionally still early:
 
 - source adapters are thin wrappers around existing external tools and APIs
+- the Overture adapter already uses the `overturemaps` Python API instead of shelling out to the CLI
 - packaging and portable output conventions are not finalized yet
 - the current focus is establishing a clean Python core and stable `escape.yaml` contract
