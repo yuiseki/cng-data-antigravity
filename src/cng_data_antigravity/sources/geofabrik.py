@@ -44,3 +44,7 @@ BUILTIN_SOURCES["osm-north-america"] = _geofabrik("north-america")
 BUILTIN_SOURCES["osm-germany"] = _geofabrik("germany")
 BUILTIN_SOURCES["osm-france"] = _geofabrik("france")
 BUILTIN_SOURCES["osm-great-britain"] = _geofabrik("great-britain")
+
+# Small territories — suitable for E2E testing (~400–700 KB PBF)
+BUILTIN_SOURCES["osm-monaco"] = _geofabrik("monaco")
+BUILTIN_SOURCES["osm-niue"] = _geofabrik("niue")
