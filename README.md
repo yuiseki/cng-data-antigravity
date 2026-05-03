@@ -26,9 +26,9 @@ This pull is **data gravity**. Geospatial data is especially heavy. Planet-scale
 
 Cloud-Native Geospatial (CNG) sources provide mechanisms that counteract data gravity. Not all sources use the same mechanism:
 
-- **HTTP range requests** — PMTiles, GeoParquet, and Cloud-Optimized GeoTIFF (COG) expose internal tile or row-group indexes, so a client can fetch only the bytes covering a specific bbox without downloading the whole file.
-- **Spatiotemporal catalogs** — STAC (SpatioTemporal Asset Catalog) lets you search by bbox, datetime, and cloud cover to discover exactly which assets are relevant, then download only those.
-- **Regional extracts** — OSM PBF files must be downloaded in full, but Geofabrik publishes pre-split regional extracts (country, prefecture, ...) that already reduce the scope before a local bbox clip.
+- **HTTP range requests**: PMTiles, GeoParquet, and Cloud-Optimized GeoTIFF (COG) expose internal tile or row-group indexes, so a client can fetch only the bytes covering a specific bbox without downloading the whole file.
+- **Spatiotemporal catalogs**: STAC (SpatioTemporal Asset Catalog) lets you search by bbox, datetime, and cloud cover to discover exactly which assets are relevant, then download only those.
+- **Regional extracts**: OSM PBF files must be downloaded in full, but Geofabrik publishes pre-split regional extracts (country, prefecture, ...) that already reduce the scope before a local bbox clip.
 
 Each mechanism gives you a way to pull **only what you need** out of a planet-scale dataset.
 
