@@ -141,7 +141,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "gdal", specifier = "==3.9.2" },
+    { name = "gdal" },
     { name = "osmium", specifier = ">=4.0.0" },
     { name = "overturemaps", specifier = ">=1.0.0" },
     { name = "pmtiles", specifier = ">=3.7.0" },
