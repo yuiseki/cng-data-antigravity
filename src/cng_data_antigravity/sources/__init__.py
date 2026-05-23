@@ -10,6 +10,7 @@ BUILTIN_SOURCES: dict[str, SourceDef] = {}
 def _load() -> None:
     from cng_data_antigravity.sources import (  # noqa: F401
         geofabrik,
+        hotosm_oam,
         mapterhorn_pmtiles,
         osm_jp_pmtiles,
         overture,

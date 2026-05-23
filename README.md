@@ -140,6 +140,9 @@ extracts:
 | `osm-jp-pmtiles` | `pmtiles` | tile.openstreetmap.jp | Japan planet PMTiles |
 | `mapterhorn-pmtiles` | `pmtiles` | Mapterhorn | global planet PMTiles (zoom 0–12) |
 | `sentinel-2-pc` | `stac-cog` | Microsoft Planetary Computer | Sentinel-2 L2A |
+| `hotosm-oam` | `stac-cog` | HOTOSM OpenAerialMap | OpenAerialMap community imagery (CC-BY-4.0) |
+| `hotosm-maxar` | `stac-cog` | HOTOSM OpenAerialMap | Maxar ARD Open Data (CC-BY-NC-4.0) |
+| `hotosm-noaa` | `stac-cog` | HOTOSM OpenAerialMap | NOAA Emergency Response Imagery (public domain) |
 | `osm-japan` | `osm-pbf` | Geofabrik | Japan |
 | `osm-kanto` | `osm-pbf` | Geofabrik | Kanto |
 | `osm-kansai` | `osm-pbf` | Geofabrik | Kansai |
@@ -228,6 +231,28 @@ extracts:
     datetime: "2026-01-01/2026-03-31"
     maxCloudCover: 30
 ```
+
+## HOTOSM OpenAerialMap options
+
+```yaml
+extracts:
+  # Most recent community imagery over the AOI (no datetime required)
+  - source: hotosm-oam
+
+  # Restrict to a specific time window
+  - source: hotosm-oam
+    datetime: "2024-01-01/2025-12-31"
+
+  # Maxar ARD Open Data (CC-BY-NC-4.0)
+  - source: hotosm-maxar
+
+  # NOAA Emergency Response Imagery (public domain)
+  - source: hotosm-noaa
+```
+
+STAC API: <https://api.imagery.hotosm.org/stac>  
+All three sources return the most recent `visual` (RGB COG) asset intersecting the AOI.
+Override `datetime` per-extract to narrow the search window.
 
 ## Development
 

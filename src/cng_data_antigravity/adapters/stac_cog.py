@@ -12,22 +12,28 @@ from cng_data_antigravity.adapters.common import utc_now
 from cng_data_antigravity.config import AOIConfig, OutputConfig
 
 
+_SORTBY_CLOUD_COVER = [{"field": "properties.eo:cloud_cover", "direction": "asc"}]
+
+
 def _search_stac(source: dict[str, Any], aoi: AOIConfig) -> Any:
     west, south, east, north = aoi.bbox
     client = pystac_client.Client.open(source["stacApiUrl"])
-    results = client.search(
+    sortby = source.get("sortby", _SORTBY_CLOUD_COVER)
+    search_kwargs: dict[str, Any] = dict(
         collections=[source["collection"]],
         bbox=[west, south, east, north],
-        datetime=source["datetime"],
-        max_items=20,
-        sortby=[{"field": "properties.eo:cloud_cover", "direction": "asc"}],
+        datetime=source.get("datetime"),
+        max_items=source.get("maxItems", 20),
     )
+    if sortby:
+        search_kwargs["sortby"] = sortby
+    results = client.search(**search_kwargs)
     max_cloud = source.get("maxCloudCover", 100)
     for item in results.items():
         cloud = item.properties.get("eo:cloud_cover", 0)
         if cloud <= max_cloud:
             return item
-    raise ValueError("No STAC item matched maxCloudCover")
+    raise ValueError("No STAC item found for AOI")
 
 
 def _sign_href(href: str, stac_api_url: str) -> str:
