@@ -5,7 +5,8 @@
 #   osm-jp-pmtiles    — OpenStreetMap Japan PMTiles (tile.openstreetmap.jp)
 #   mapterhorn-pmtiles — Global OSM vector tiles (Mapterhorn planet.pmtiles, zoom 0-12)
 #   sentinel-2-pc     — Sentinel-2 L2A via Planetary Computer → output/sentinel-2-pc/sentinel-2-pc.tif
-#   maxar-opendata    — Maxar Open Data ARD disaster imagery (static STAC catalog); MECE AOI mosaic
+#   maxar-opendata    — Maxar Open Data ARD disaster imagery (static STAC catalog)
+#                       MECE AOI coverage → clipped per-tile COGs + local static STAC catalog.json
 #                       Tip: set collection: <event> (e.g. Hurricane-Melissa-Oct-2025) to skip walking every event
 #   osm-japan / osm-kanto / osm-kansai / osm-chubu / osm-kyushu / osm-tohoku / osm-hokkaido
 #   osm-asia / osm-europe / osm-north-america / osm-germany / osm-france / osm-great-britain

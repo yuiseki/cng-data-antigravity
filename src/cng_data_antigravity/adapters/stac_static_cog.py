@@ -10,8 +10,10 @@ Convention over configuration: by default it covers the AOI **MECE**
 (mutually exclusive, collectively exhaustive). Items sharing the same
 ground tile (non-overlapping grid cell) are deduplicated to the most
 recent acquisition, and every ground tile intersecting the AOI is
-included. The selected ``visual`` COGs are mosaicked into a single
-GeoTIFF clipped to the AOI bbox.
+included. Each selected ``visual`` COG is clipped to the AOI and saved
+as its own GeoTIFF, and a local static STAC ``catalog.json`` (plus one
+Item per tile) is written so the output directory is itself a valid,
+self-describing static STAC catalog of the escaped raw data.
 
 Used by the Maxar Open Data catalog:
 https://maxar-opendata.s3.amazonaws.com/events/catalog.json
@@ -26,7 +28,7 @@ from urllib.parse import urljoin
 from urllib.request import urlopen
 
 from cng_data_antigravity.adapters.common import (
-    gdal_warp_mosaic_bbox,
+    gdal_translate_bbox,
     make_request,
     utc_now,
 )
@@ -180,6 +182,73 @@ def select_mece_items(
     return [(item, url) for _, (_, item, url) in sorted(best.items())]
 
 
+_COG_MEDIA_TYPE = "image/tiff; application=geotiff; profile=cloud-optimized"
+
+
+def _safe_id(item_id: str) -> str:
+    """Filesystem-safe stem for an item id like ``53/120020323222/1030...``."""
+    return item_id.replace("/", "_").replace("\\", "_")
+
+
+def _bbox_intersection(a: Bbox, b: Bbox) -> Bbox:
+    return [max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3])]
+
+
+def _bbox_polygon(bbox: Bbox) -> dict[str, Any]:
+    west, south, east, north = bbox
+    return {
+        "type": "Polygon",
+        "coordinates": [[
+            [west, south], [east, south], [east, north], [west, north], [west, south],
+        ]],
+    }
+
+
+def _build_stac_item(item: dict[str, Any], clipped_bbox: Bbox, cog_filename: str) -> dict[str, Any]:
+    """A static STAC Item describing one escaped, AOI-clipped COG."""
+    item_id = item.get("id", "")
+    stem = _safe_id(item_id)
+    return {
+        "stac_version": "1.0.0",
+        "type": "Feature",
+        "id": item_id,
+        "bbox": clipped_bbox,
+        "geometry": _bbox_polygon(clipped_bbox),
+        "properties": {"datetime": (item.get("properties") or {}).get("datetime")},
+        "assets": {
+            "visual": {
+                "href": f"./{cog_filename}",
+                "type": _COG_MEDIA_TYPE,
+                "roles": ["data", "visual"],
+            }
+        },
+        "links": [
+            {"rel": "root", "href": "./catalog.json", "type": "application/json"},
+            {"rel": "parent", "href": "./catalog.json", "type": "application/json"},
+            {"rel": "self", "href": f"./{stem}.json", "type": "application/json"},
+        ],
+    }
+
+
+def _build_catalog(catalog_id: str, source: dict[str, Any], item_stems: list[str]) -> dict[str, Any]:
+    """A static STAC Catalog linking to every escaped Item."""
+    links = [{"rel": "root", "href": "./catalog.json", "type": "application/json"}]
+    links += [
+        {"rel": "item", "href": f"./{stem}.json", "type": "application/json"}
+        for stem in item_stems
+    ]
+    return {
+        "stac_version": "1.0.0",
+        "type": "Catalog",
+        "id": catalog_id,
+        "description": (
+            f"AOI escape of {source.get('collection') or 'Maxar Open Data'} "
+            f"from {source['catalogUrl']}"
+        ),
+        "links": links,
+    }
+
+
 def run_stac_static_cog_extract(
     source: dict[str, Any],
     aoi: AOIConfig,
@@ -189,8 +258,8 @@ def run_stac_static_cog_extract(
     prev_meta: dict[str, Any] | None,
     fetch: FetchFn = _fetch_json,
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
-    if output.format != "geotiff":
-        raise ValueError("stac-static-cog source only supports geotiff output")
+    if output.format != "stac-catalog":
+        raise ValueError("stac-static-cog source only supports stac-catalog output")
 
     asset_key = source.get("asset", "visual")
     items = find_aoi_items(
@@ -204,20 +273,21 @@ def run_stac_static_cog_extract(
     if not selected:
         raise ValueError("No STAC item found intersecting the AOI in the static catalog")
 
-    asset_hrefs: list[str] = []
+    # Resolve the escapable set (items that actually carry the requested asset).
+    escapable: list[tuple[dict[str, Any], str]] = []
     item_ids: list[str] = []
     datetimes: list[str] = []
     for item, item_url in selected:
         asset = (item.get("assets") or {}).get(asset_key)
         if not asset or not asset.get("href"):
             continue
-        asset_hrefs.append(urljoin(item_url, asset["href"]))
+        escapable.append((item, urljoin(item_url, asset["href"])))
         item_ids.append(item.get("id"))
         dt = (item.get("properties") or {}).get("datetime")
         if dt:
             datetimes.append(dt)
 
-    if not asset_hrefs:
+    if not escapable:
         raise ValueError(f"No {asset_key!r} asset found in the selected items")
 
     source_info: dict[str, Any] = {
@@ -235,7 +305,22 @@ def run_stac_static_cog_extract(
     if output_path.exists() and not force and source_info["itemIds"] == prev_info.get("itemIds"):
         return source_info, None
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"  [stac-static-cog] gdalwarp mosaic {len(asset_hrefs)} item(s) -> {output_path}")
-    gdal_warp_mosaic_bbox(asset_hrefs, output_path, aoi.bbox)
+    output_dir = output_path.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    item_stems: list[str] = []
+    for item, asset_href in escapable:
+        stem = _safe_id(item.get("id", ""))
+        cog_filename = f"{stem}.tif"
+        clipped_bbox = _bbox_intersection(item["bbox"], aoi.bbox)
+        print(f"  [stac-static-cog] clip {item.get('id')} -> {output_dir / cog_filename}")
+        gdal_translate_bbox(asset_href, output_dir / cog_filename, aoi.bbox)
+        stac_item = _build_stac_item(item, clipped_bbox, cog_filename)
+        (output_dir / f"{stem}.json").write_text(
+            json.dumps(stac_item, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        item_stems.append(stem)
+
+    catalog = _build_catalog(output_dir.name, source, item_stems)
+    output_path.write_text(json.dumps(catalog, ensure_ascii=False, indent=2), encoding="utf-8")
     return source_info, None

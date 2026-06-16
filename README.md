@@ -168,7 +168,7 @@ extracts:
 | `pmtiles` | PMTiles | `pmtiles` | ETag / Last-Modified / Content-Length |
 | `osm-pbf` | OSM PBF | `osmium` | ETag / Last-Modified / Content-Length |
 | `stac-cog` | GeoTIFF | `pystac_client` + `osgeo.gdal` | STAC item ID |
-| `stac-static-cog` | GeoTIFF (mosaic) | `osgeo.gdal` | selected STAC item IDs |
+| `stac-static-cog` | clipped COGs + static STAC `catalog.json` | `osgeo.gdal` | selected STAC item IDs |
 
 ### Output layout
 
@@ -258,7 +258,15 @@ Override `datetime` per-extract to narrow the search window.
 
 ## Maxar Open Data options
 
-Maxar publishes ARD disaster imagery as a **static STAC catalog** (plain JSON on S3, no `/search` endpoint), organized by event. The `stac-static-cog` adapter walks the catalog tree, prunes whole events/acquisitions by their spatial extent, and—by convention—covers the AOI **MECE** (mutually exclusive, collectively exhaustive): the most recent acquisition is selected for every ground tile intersecting the AOI, and the selected `visual` COGs are mosaicked into a single GeoTIFF clipped to the AOI.
+Maxar publishes ARD disaster imagery as a **static STAC catalog** (plain JSON on S3, no `/search` endpoint), organized by event. The `stac-static-cog` adapter walks the catalog tree, prunes whole events/acquisitions by their spatial extent, and—by convention—covers the AOI **MECE** (mutually exclusive, collectively exhaustive): the most recent acquisition is selected for every ground tile intersecting the AOI. Each selected `visual` COG is clipped to the AOI and saved as its own GeoTIFF, and a local static STAC `catalog.json` (plus one Item per tile) is written so the output directory is itself a valid, self-describing static STAC catalog of the escaped raw data:
+
+```
+output/maxar-opendata/
+  catalog.json                 # static STAC Catalog linking every escaped Item
+  {tile-id}.json               # STAC Item per ground tile
+  {tile-id}.tif                # AOI-clipped COG per ground tile
+  metadata.json                # provenance (selected item IDs, timing, ...)
+```
 
 ```yaml
 extracts:

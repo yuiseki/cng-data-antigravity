@@ -10,8 +10,10 @@ Maxar publishes ARD Open Data for disaster events as a *static* STAC catalog
 
 By default this source covers the AOI **MECE** (mutually exclusive, collectively
 exhaustive): the most recent acquisition is selected for every ground tile that
-intersects the AOI, and all selected ``visual`` COGs are mosaicked into a single
-GeoTIFF clipped to the AOI.
+intersects the AOI. Each selected ``visual`` COG is clipped to the AOI and saved
+as its own GeoTIFF, and a local static STAC ``catalog.json`` (plus one Item per
+tile) is written, so the output directory is itself a valid static STAC catalog
+of the escaped raw data.
 
 Override ``collection`` to restrict the walk to one event (e.g.
 ``Hurricane-Melissa-Oct-2025``) and ``datetime`` (ISO 8601 interval) to narrow

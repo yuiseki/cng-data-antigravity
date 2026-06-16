@@ -47,8 +47,8 @@ def test_default_outputs_stac_cog():
 def test_default_outputs_stac_static_cog():
     outputs = default_outputs({"type": "stac-static-cog"}, "maxar-opendata")
     assert len(outputs) == 1
-    assert outputs[0].format == "geotiff"
-    assert outputs[0].path == "maxar-opendata.tif"
+    assert outputs[0].format == "stac-catalog"
+    assert outputs[0].path == "catalog.json"
 
 
 def test_default_outputs_overture_single_type():

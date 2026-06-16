@@ -36,26 +36,6 @@ def gdal_translate_bbox(src_href: str, dest: Path, bbox: list[float]) -> None:
     gdal.Translate(str(dest), f"/vsicurl/{src_href}", options=opts)
 
 
-def gdal_warp_mosaic_bbox(src_hrefs: list[str], dest: Path, bbox: list[float]) -> None:
-    """Mosaic multiple (remote) COGs into a single GeoTIFF clipped to the AOI bbox.
-
-    Sources may be in differing projections; gdalwarp reprojects them all to
-    EPSG:4326 and composites them within the AOI bounds.
-    """
-    gdal = _import_gdal()
-    west, south, east, north = bbox
-    sources = [f"/vsicurl/{href}" for href in src_hrefs]
-    opts = gdal.WarpOptions(
-        format="GTiff",
-        dstSRS="EPSG:4326",
-        outputBounds=[west, south, east, north],
-        outputBoundsSRS="EPSG:4326",
-        creationOptions=["COMPRESS=LZW", "TILED=YES"],
-        multithread=True,
-    )
-    gdal.Warp(str(dest), sources, options=opts)
-
-
 def make_request(url: str, *, method: str = "GET", extra_headers: dict[str, str] | None = None) -> Request:
     headers = {"User-Agent": _USER_AGENT}
     if extra_headers:

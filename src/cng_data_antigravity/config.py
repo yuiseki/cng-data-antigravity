@@ -14,7 +14,7 @@ _DEFAULT_FORMAT: dict[str, str] = {
     "pmtiles": "pmtiles",
     "osm-pbf": "osm.pbf",
     "stac-cog": "geotiff",
-    "stac-static-cog": "geotiff",
+    "stac-static-cog": "stac-catalog",
 }
 
 # Convention: file extension per format
@@ -23,6 +23,7 @@ _FORMAT_EXT: dict[str, str] = {
     "pmtiles": ".pmtiles",
     "osm.pbf": ".osm.pbf",
     "geotiff": ".tif",
+    "stac-catalog": ".json",
 }
 
 # Default Overture types when overtureTypes is not specified
@@ -108,6 +109,12 @@ def resolve_source(extract: ExtractConfig, sources: dict[str, SourceDef]) -> dic
 def default_outputs(effective_source: dict[str, Any], extract_id: str) -> list[OutputConfig]:
     """Return convention-based outputs for the given adapter type and extract id."""
     adapter = effective_source["type"]
+
+    if adapter == "stac-static-cog":
+        # Output is a self-describing static STAC catalog directory; the
+        # catalog.json is its canonical entry point (COGs live alongside it).
+        return [OutputConfig(format="stac-catalog", path="catalog.json")]
+
     fmt = _DEFAULT_FORMAT.get(adapter)
     if fmt is None:
         raise ValueError(f"unknown adapter type: {adapter!r}")

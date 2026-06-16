@@ -128,22 +128,23 @@ def test_datetime_filter_narrows_window():
     assert ids == ["19/aaa/strip2"]
 
 
-def test_run_extract_mosaics_selected_visual_assets(tmp_path: Path, monkeypatch):
-    captured: dict = {}
+def test_run_extract_writes_clipped_cogs_and_static_catalog(tmp_path: Path, monkeypatch):
+    import json
 
-    def fake_mosaic(hrefs, dest, bbox):
-        captured["hrefs"] = hrefs
-        captured["dest"] = dest
-        captured["bbox"] = bbox
-        Path(dest).write_bytes(b"fake-geotiff")
+    clips: list[tuple[str, str]] = []
 
-    monkeypatch.setattr(adapter, "gdal_warp_mosaic_bbox", fake_mosaic)
+    def fake_translate(src_href, dest, bbox):
+        clips.append((src_href, Path(dest).name))
+        assert bbox == _AOI.bbox
+        Path(dest).write_bytes(b"fake-cog")
 
-    out = tmp_path / "maxar.tif"
+    monkeypatch.setattr(adapter, "gdal_translate_bbox", fake_translate)
+
+    out = tmp_path / "maxar-opendata" / "catalog.json"
     source_info, source_state = adapter.run_stac_static_cog_extract(
         {"type": "stac-static-cog", "catalogUrl": _CATALOG, "asset": "visual"},
         _AOI,
-        OutputConfig(format="geotiff", path="maxar.tif"),
+        OutputConfig(format="stac-catalog", path="catalog.json"),
         out,
         force=False,
         prev_meta=None,
@@ -151,33 +152,49 @@ def test_run_extract_mosaics_selected_visual_assets(tmp_path: Path, monkeypatch)
     )
 
     assert source_state is None
-    assert source_info["type"] == "stac-static-cog"
     assert source_info["itemCount"] == 2
     assert source_info["itemIds"] == ["19/aaa/strip2", "19/bbb/strip1"]
     assert source_info["datetimeRange"] == ["2023-01-01 00:00:00Z", "2025-01-01 00:00:00Z"]
-    # Asset hrefs are resolved relative to each item's URL.
-    assert captured["hrefs"] == [
-        "https://x/events/EventA/ard/19/aaa/2025/strip2-visual.tif",
-        "https://x/events/EventA/ard/19/bbb/2023/strip1-visual.tif",
+
+    # One clipped COG per MECE tile, sourced from the resolved asset href.
+    assert clips == [
+        ("https://x/events/EventA/ard/19/aaa/2025/strip2-visual.tif", "19_aaa_strip2.tif"),
+        ("https://x/events/EventA/ard/19/bbb/2023/strip1-visual.tif", "19_bbb_strip1.tif"),
     ]
-    assert captured["bbox"] == _AOI.bbox
-    assert out.read_bytes() == b"fake-geotiff"
+    out_dir = out.parent
+    assert (out_dir / "19_aaa_strip2.tif").read_bytes() == b"fake-cog"
+    assert (out_dir / "19_bbb_strip1.tif").exists()
+
+    # A valid static STAC catalog linking to one Item per tile.
+    catalog = json.loads(out.read_text())
+    assert catalog["type"] == "Catalog"
+    item_hrefs = sorted(l["href"] for l in catalog["links"] if l["rel"] == "item")
+    assert item_hrefs == ["./19_aaa_strip2.json", "./19_bbb_strip1.json"]
+
+    # Each Item points at its local clipped COG and carries a clipped bbox.
+    stac_item = json.loads((out_dir / "19_aaa_strip2.json").read_text())
+    assert stac_item["type"] == "Feature"
+    assert stac_item["id"] == "19/aaa/strip2"
+    assert stac_item["assets"]["visual"]["href"] == "./19_aaa_strip2.tif"
+    # clipped bbox = intersection of item bbox [10,10,10.5,10.5] and AOI [10,10,11,11]
+    assert stac_item["bbox"] == [10.0, 10.0, 10.5, 10.5]
 
 
 def test_run_extract_skips_when_unchanged(tmp_path: Path, monkeypatch):
     calls: list[str] = []
     monkeypatch.setattr(
-        adapter, "gdal_warp_mosaic_bbox", lambda *a, **k: calls.append("mosaic")
+        adapter, "gdal_translate_bbox", lambda *a, **k: calls.append("clip")
     )
 
-    out = tmp_path / "maxar.tif"
-    out.write_bytes(b"already-here")
+    out = tmp_path / "maxar-opendata" / "catalog.json"
+    out.parent.mkdir(parents=True)
+    out.write_text('{"type": "Catalog"}', encoding="utf-8")
     prev_meta = {"sourceInfo": {"itemIds": ["19/aaa/strip2", "19/bbb/strip1"]}}
 
     source_info, _ = adapter.run_stac_static_cog_extract(
         {"type": "stac-static-cog", "catalogUrl": _CATALOG, "asset": "visual"},
         _AOI,
-        OutputConfig(format="geotiff", path="maxar.tif"),
+        OutputConfig(format="stac-catalog", path="catalog.json"),
         out,
         force=False,
         prev_meta=prev_meta,
@@ -185,7 +202,7 @@ def test_run_extract_skips_when_unchanged(tmp_path: Path, monkeypatch):
     )
 
     assert calls == []
-    assert out.read_bytes() == b"already-here"
+    assert out.read_text() == '{"type": "Catalog"}'
     assert source_info["itemIds"] == ["19/aaa/strip2", "19/bbb/strip1"]
 
 
@@ -195,8 +212,8 @@ def test_run_extract_raises_when_no_items(tmp_path: Path):
         adapter.run_stac_static_cog_extract(
             {"type": "stac-static-cog", "catalogUrl": _CATALOG, "asset": "visual"},
             far_aoi,
-            OutputConfig(format="geotiff", path="maxar.tif"),
-            tmp_path / "maxar.tif",
+            OutputConfig(format="stac-catalog", path="catalog.json"),
+            tmp_path / "catalog.json",
             force=False,
             prev_meta=None,
             fetch=_fetch,
