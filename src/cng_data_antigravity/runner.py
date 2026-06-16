@@ -9,6 +9,7 @@ from cng_data_antigravity.adapters import (
     run_overture_extract,
     run_pmtiles_extract,
     run_stac_cog_extract,
+    run_stac_static_cog_extract,
 )
 from cng_data_antigravity.config import EscapeConfig, default_outputs, resolve_source
 from cng_data_antigravity.metadata import read_prev_metadata, write_metadata
@@ -20,6 +21,7 @@ SOURCE_HANDLERS: dict[str, Handler] = {
     "pmtiles": run_pmtiles_extract,
     "osm-pbf": run_osm_pbf_extract,
     "stac-cog": run_stac_cog_extract,
+    "stac-static-cog": run_stac_static_cog_extract,
 }
 
 
@@ -60,7 +62,7 @@ def run_escape(config: EscapeConfig, *, config_path: Path, force: bool = False) 
                 source_info, source_state = handler(
                     effective_source, config.aoi, output, output_path, force, prev_meta, work_dir,
                 )
-            elif adapter == "stac-cog":
+            elif adapter in ("stac-cog", "stac-static-cog"):
                 source_info, source_state = handler(
                     effective_source, config.aoi, output, output_path, force, prev_meta,
                 )

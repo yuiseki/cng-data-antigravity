@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.request import Request, urlopen
 
 _USER_AGENT = "cng-data-antigravity/0.1 (+https://github.com/yuiseki/cng-data-antigravity)"
@@ -8,6 +9,51 @@ _USER_AGENT = "cng-data-antigravity/0.1 (+https://github.com/yuiseki/cng-data-an
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _import_gdal():
+    try:
+        from osgeo import gdal  # noqa: PLC0415
+    except ImportError as exc:
+        raise ImportError(
+            "osgeo.gdal is required for STAC COG adapters. "
+            "Install it with: pip install \"GDAL==$(gdal-config --version)\""
+        ) from exc
+    gdal.UseExceptions()
+    return gdal
+
+
+def gdal_translate_bbox(src_href: str, dest: Path, bbox: list[float]) -> None:
+    """Clip a single (remote) COG to the AOI bbox, writing a GeoTIFF."""
+    gdal = _import_gdal()
+    west, south, east, north = bbox
+    opts = gdal.TranslateOptions(
+        format="GTiff",
+        projWin=[west, north, east, south],
+        projWinSRS="EPSG:4326",
+        creationOptions=["COMPRESS=LZW", "TILED=YES"],
+    )
+    gdal.Translate(str(dest), f"/vsicurl/{src_href}", options=opts)
+
+
+def gdal_warp_mosaic_bbox(src_hrefs: list[str], dest: Path, bbox: list[float]) -> None:
+    """Mosaic multiple (remote) COGs into a single GeoTIFF clipped to the AOI bbox.
+
+    Sources may be in differing projections; gdalwarp reprojects them all to
+    EPSG:4326 and composites them within the AOI bounds.
+    """
+    gdal = _import_gdal()
+    west, south, east, north = bbox
+    sources = [f"/vsicurl/{href}" for href in src_hrefs]
+    opts = gdal.WarpOptions(
+        format="GTiff",
+        dstSRS="EPSG:4326",
+        outputBounds=[west, south, east, north],
+        outputBoundsSRS="EPSG:4326",
+        creationOptions=["COMPRESS=LZW", "TILED=YES"],
+        multithread=True,
+    )
+    gdal.Warp(str(dest), sources, options=opts)
 
 
 def make_request(url: str, *, method: str = "GET", extra_headers: dict[str, str] | None = None) -> Request:

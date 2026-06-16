@@ -12,6 +12,7 @@ def _load() -> None:
         geofabrik,
         hotosm_oam,
         mapterhorn_pmtiles,
+        maxar_opendata,
         osm_jp_pmtiles,
         overture,
         sentinel_2_pc,

@@ -8,7 +8,7 @@ from urllib.request import urlopen
 
 import pystac_client
 
-from cng_data_antigravity.adapters.common import utc_now
+from cng_data_antigravity.adapters.common import gdal_translate_bbox, utc_now
 from cng_data_antigravity.config import AOIConfig, OutputConfig
 
 
@@ -46,25 +46,6 @@ def _sign_href(href: str, stac_api_url: str) -> str:
         return json.load(response)["href"]
 
 
-def _gdal_translate_bbox(src_href: str, dest: Path, bbox: list[float]) -> None:
-    try:
-        from osgeo import gdal  # noqa: PLC0415
-    except ImportError as exc:
-        raise ImportError(
-            "osgeo.gdal is required for the stac-cog adapter. "
-            "Install it with: pip install \"GDAL==$(gdal-config --version)\""
-        ) from exc
-    gdal.UseExceptions()
-    west, south, east, north = bbox
-    opts = gdal.TranslateOptions(
-        format="GTiff",
-        projWin=[west, north, east, south],
-        projWinSRS="EPSG:4326",
-        creationOptions=["COMPRESS=LZW", "TILED=YES"],
-    )
-    gdal.Translate(str(dest), f"/vsicurl/{src_href}", options=opts)
-
-
 def run_stac_cog_extract(
     source: dict[str, Any],
     aoi: AOIConfig,
@@ -94,5 +75,5 @@ def run_stac_cog_extract(
     signed_href = _sign_href(asset_href, source["stacApiUrl"])
     output_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"  [stac-cog] gdal_translate {item.id} -> {output_path}")
-    _gdal_translate_bbox(signed_href, output_path, aoi.bbox)
+    gdal_translate_bbox(signed_href, output_path, aoi.bbox)
     return source_info, None

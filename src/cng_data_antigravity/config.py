@@ -14,6 +14,7 @@ _DEFAULT_FORMAT: dict[str, str] = {
     "pmtiles": "pmtiles",
     "osm-pbf": "osm.pbf",
     "stac-cog": "geotiff",
+    "stac-static-cog": "geotiff",
 }
 
 # Convention: file extension per format

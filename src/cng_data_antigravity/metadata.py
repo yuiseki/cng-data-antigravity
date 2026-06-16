@@ -13,6 +13,7 @@ DEFAULT_ATTRIBUTION: dict[str, str] = {
     "pmtiles": "© OpenStreetMap contributors, available under ODbL",
     "osm-pbf": "© OpenStreetMap contributors, available under ODbL",
     "stac-cog": "Contains modified Copernicus Sentinel data. Accessed via Microsoft Planetary Computer.",
+    "stac-static-cog": "© Maxar Open Data, available under CC-BY-NC-4.0",
 }
 
 

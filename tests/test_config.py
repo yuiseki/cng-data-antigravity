@@ -44,6 +44,13 @@ def test_default_outputs_stac_cog():
     assert outputs[0].path == "sentinel2-tokyo.tif"
 
 
+def test_default_outputs_stac_static_cog():
+    outputs = default_outputs({"type": "stac-static-cog"}, "maxar-opendata")
+    assert len(outputs) == 1
+    assert outputs[0].format == "geotiff"
+    assert outputs[0].path == "maxar-opendata.tif"
+
+
 def test_default_outputs_overture_single_type():
     outputs = default_outputs({"type": "overture", "overtureType": "building"}, "tokyo-buildings")
     assert len(outputs) == 1

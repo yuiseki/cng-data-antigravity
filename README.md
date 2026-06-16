@@ -29,7 +29,7 @@ Cloud-Native Geospatial (CNG) data sources provide mechanisms that counteract da
 Not all sources use the same mechanism:
 
 - **HTTP range requests**: PMTiles and COG expose internal tile indexes, while GeoParquet can use partitioning, row-group metadata, and spatially sorted layouts to avoid scanning unrelated bytes. Together, these mechanisms let a client fetch or scan only the portions relevant to a specific AOI instead of downloading the whole dataset.
-- **Spatiotemporal catalogs**: STAC (SpatioTemporal Asset Catalog) lets you search by bbox, datetime, and cloud cover to discover exactly which assets are relevant, then download only those.
+- **Spatiotemporal catalogs**: STAC (SpatioTemporal Asset Catalog) lets you search by bbox, datetime, and cloud cover to discover exactly which assets are relevant, then download only those. Even a *static* STAC catalog (plain JSON files, no search endpoint) carries this property: each collection declares a spatial extent, so whole subtrees that miss the AOI can be pruned without fetching their items.
 - **Regional extracts**: OSM PBF files must be downloaded in full, but Geofabrik publishes pre-split regional extracts (country, prefecture, ...) that already reduce the scope before a local bbox clip.
 
 Each mechanism gives you a way to pull **only what you need** out of a planet-scale dataset.
@@ -143,6 +143,7 @@ extracts:
 | `hotosm-oam` | `stac-cog` | HOTOSM OpenAerialMap | OpenAerialMap community imagery (CC-BY-4.0) |
 | `hotosm-maxar` | `stac-cog` | HOTOSM OpenAerialMap | Maxar ARD Open Data (CC-BY-NC-4.0) |
 | `hotosm-noaa` | `stac-cog` | HOTOSM OpenAerialMap | NOAA Emergency Response Imagery (public domain) |
+| `maxar-opendata` | `stac-static-cog` | Maxar Open Data | ARD disaster imagery, static STAC catalog (CC-BY-NC-4.0) |
 | `osm-japan` | `osm-pbf` | Geofabrik | Japan |
 | `osm-kanto` | `osm-pbf` | Geofabrik | Kanto |
 | `osm-kansai` | `osm-pbf` | Geofabrik | Kansai |
@@ -167,6 +168,7 @@ extracts:
 | `pmtiles` | PMTiles | `pmtiles` | ETag / Last-Modified / Content-Length |
 | `osm-pbf` | OSM PBF | `osmium` | ETag / Last-Modified / Content-Length |
 | `stac-cog` | GeoTIFF | `pystac_client` + `osgeo.gdal` | STAC item ID |
+| `stac-static-cog` | GeoTIFF (mosaic) | `osgeo.gdal` | selected STAC item IDs |
 
 ### Output layout
 
@@ -253,6 +255,28 @@ extracts:
 STAC API: <https://api.imagery.hotosm.org/stac>  
 All three sources return the most recent `visual` (RGB COG) asset intersecting the AOI.
 Override `datetime` per-extract to narrow the search window.
+
+## Maxar Open Data options
+
+Maxar publishes ARD disaster imagery as a **static STAC catalog** (plain JSON on S3, no `/search` endpoint), organized by event. The `stac-static-cog` adapter walks the catalog tree, prunes whole events/acquisitions by their spatial extent, and—by convention—covers the AOI **MECE** (mutually exclusive, collectively exhaustive): the most recent acquisition is selected for every ground tile intersecting the AOI, and the selected `visual` COGs are mosaicked into a single GeoTIFF clipped to the AOI.
+
+```yaml
+extracts:
+  # Cover the AOI across all events (auto-discovers intersecting imagery)
+  - source: maxar-opendata
+
+  # Restrict to a single event (much faster: skips walking every other event)
+  - source: maxar-opendata
+    collection: Hurricane-Melissa-Oct-2025
+
+  # Narrow the time window (ISO 8601 interval)
+  - source: maxar-opendata
+    collection: Hurricane-Melissa-Oct-2025
+    datetime: "2025-10-01/2025-12-31"
+```
+
+Static catalog: <https://maxar-opendata.s3.amazonaws.com/events/catalog.json>  
+License: CC-BY-NC-4.0. Without `collection`, the tool fetches every event's `collection.json` to read its extent (there is no search endpoint), so scoping to a `collection` is recommended when you know the event.
 
 ## Development
 
