@@ -16,8 +16,9 @@ tile) is written, so the output directory is itself a valid static STAC catalog
 of the escaped raw data.
 
 Override ``collection`` to restrict the walk to one event (e.g.
-``Hurricane-Melissa-Oct-2025``) and ``datetime`` (ISO 8601 interval) to narrow
-the time window.
+``Hurricane-Melissa-Oct-2025``), ``datetime`` (ISO 8601 interval) to narrow the
+time window, and ``concurrency`` (default 4) to tune how many tiles are clipped
+in parallel. GDAL retries transient S3 throttling with backoff.
 
 License: CC-BY-NC-4.0
 https://maxar-opendata.s3.amazonaws.com/events/catalog.json

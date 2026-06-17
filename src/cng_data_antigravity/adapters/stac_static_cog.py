@@ -21,11 +21,18 @@ https://maxar-opendata.s3.amazonaws.com/events/catalog.json
 from __future__ import annotations
 
 import json
+import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urljoin
 from urllib.request import urlopen
+
+# Default number of tiles clipped concurrently. Each tile's gdal.Translate
+# already issues several range requests, so a small fan-out is plenty; the
+# real defence against S3 throttling is GDAL's HTTP retry/backoff below.
+_DEFAULT_CONCURRENCY = 4
 
 from cng_data_antigravity.adapters.common import (
     gdal_translate_bbox,
@@ -308,8 +315,14 @@ def run_stac_static_cog_extract(
     output_dir = output_path.parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    item_stems: list[str] = []
-    for item, asset_href in escapable:
+    # Let GDAL absorb transient S3 throttling (503 SlowDown) with backoff rather
+    # than failing. setdefault so an operator's own env still wins.
+    os.environ.setdefault("GDAL_HTTP_MAX_RETRY", "5")
+    os.environ.setdefault("GDAL_HTTP_RETRY_DELAY", "1")
+    os.environ.setdefault("AWS_NO_SIGN_REQUEST", "YES")  # anonymous public bucket
+
+    def _escape_tile(entry: tuple[dict[str, Any], str]) -> str:
+        item, asset_href = entry
         stem = _safe_id(item.get("id", ""))
         cog_filename = f"{stem}.tif"
         clipped_bbox = _bbox_intersection(item["bbox"], aoi.bbox)
@@ -319,7 +332,16 @@ def run_stac_static_cog_extract(
         (output_dir / f"{stem}.json").write_text(
             json.dumps(stac_item, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-        item_stems.append(stem)
+        return stem
+
+    concurrency = max(1, int(source.get("concurrency", _DEFAULT_CONCURRENCY)))
+    if concurrency == 1:
+        item_stems = [_escape_tile(entry) for entry in escapable]
+    else:
+        # ex.map preserves input order, so the catalog stays deterministic
+        # regardless of which tile finishes first.
+        with ThreadPoolExecutor(max_workers=min(concurrency, len(escapable))) as pool:
+            item_stems = list(pool.map(_escape_tile, escapable))
 
     catalog = _build_catalog(output_dir.name, source, item_stems)
     output_path.write_text(json.dumps(catalog, ensure_ascii=False, indent=2), encoding="utf-8")

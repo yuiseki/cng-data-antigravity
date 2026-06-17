@@ -281,7 +281,14 @@ extracts:
   - source: maxar-opendata
     collection: Hurricane-Melissa-Oct-2025
     datetime: "2025-10-01/2025-12-31"
+
+  # Tune how many tiles are clipped concurrently (default 4)
+  - source: maxar-opendata
+    collection: Hurricane-Melissa-Oct-2025
+    concurrency: 8
 ```
+
+Tiles are clipped concurrently (default `concurrency: 4`). Each tile's `gdal_translate` already issues several HTTP range requests, so a small fan-out is plenty; GDAL is configured to retry transient S3 throttling (`503 SlowDown`) with backoff, so occasional rate-limiting self-heals rather than failing the run.
 
 Static catalog: <https://maxar-opendata.s3.amazonaws.com/events/catalog.json>  
 License: CC-BY-NC-4.0. Without `collection`, the tool fetches every event's `collection.json` to read its extent (there is no search endpoint), so scoping to a `collection` is recommended when you know the event.

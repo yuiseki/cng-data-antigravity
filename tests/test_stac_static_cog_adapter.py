@@ -131,10 +131,11 @@ def test_datetime_filter_narrows_window():
 def test_run_extract_writes_clipped_cogs_and_static_catalog(tmp_path: Path, monkeypatch):
     import json
 
-    clips: list[tuple[str, str]] = []
+    # Clips may run on worker threads, so record into a dict (order-independent).
+    clips: dict[str, str] = {}
 
     def fake_translate(src_href, dest, bbox):
-        clips.append((src_href, Path(dest).name))
+        clips[Path(dest).name] = src_href
         assert bbox == _AOI.bbox
         Path(dest).write_bytes(b"fake-cog")
 
@@ -157,10 +158,10 @@ def test_run_extract_writes_clipped_cogs_and_static_catalog(tmp_path: Path, monk
     assert source_info["datetimeRange"] == ["2023-01-01 00:00:00Z", "2025-01-01 00:00:00Z"]
 
     # One clipped COG per MECE tile, sourced from the resolved asset href.
-    assert clips == [
-        ("https://x/events/EventA/ard/19/aaa/2025/strip2-visual.tif", "19_aaa_strip2.tif"),
-        ("https://x/events/EventA/ard/19/bbb/2023/strip1-visual.tif", "19_bbb_strip1.tif"),
-    ]
+    assert clips == {
+        "19_aaa_strip2.tif": "https://x/events/EventA/ard/19/aaa/2025/strip2-visual.tif",
+        "19_bbb_strip1.tif": "https://x/events/EventA/ard/19/bbb/2023/strip1-visual.tif",
+    }
     out_dir = out.parent
     assert (out_dir / "19_aaa_strip2.tif").read_bytes() == b"fake-cog"
     assert (out_dir / "19_bbb_strip1.tif").exists()
@@ -178,6 +179,30 @@ def test_run_extract_writes_clipped_cogs_and_static_catalog(tmp_path: Path, monk
     assert stac_item["assets"]["visual"]["href"] == "./19_aaa_strip2.tif"
     # clipped bbox = intersection of item bbox [10,10,10.5,10.5] and AOI [10,10,11,11]
     assert stac_item["bbox"] == [10.0, 10.0, 10.5, 10.5]
+
+
+def test_run_extract_respects_concurrency_one(tmp_path: Path, monkeypatch):
+    import json
+
+    monkeypatch.setattr(
+        adapter, "gdal_translate_bbox", lambda href, dest, bbox: Path(dest).write_bytes(b"c")
+    )
+
+    out = tmp_path / "maxar-opendata" / "catalog.json"
+    source_info, _ = adapter.run_stac_static_cog_extract(
+        {"type": "stac-static-cog", "catalogUrl": _CATALOG, "asset": "visual", "concurrency": 1},
+        _AOI,
+        OutputConfig(format="stac-catalog", path="catalog.json"),
+        out,
+        force=False,
+        prev_meta=None,
+        fetch=_fetch,
+    )
+
+    assert source_info["itemIds"] == ["19/aaa/strip2", "19/bbb/strip1"]
+    catalog = json.loads(out.read_text())
+    item_hrefs = sorted(l["href"] for l in catalog["links"] if l["rel"] == "item")
+    assert item_hrefs == ["./19_aaa_strip2.json", "./19_bbb_strip1.json"]
 
 
 def test_run_extract_skips_when_unchanged(tmp_path: Path, monkeypatch):
