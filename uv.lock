@@ -164,9 +164,9 @@ wheels = [
 
 [[package]]
 name = "gdal"
-version = "3.9.2"
+version = "3.13.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/bd/10/85c41cc7c520be9cf755f5862e8c6c8b0c91c8987cb1c706f7092f9893ee/gdal-3.9.2.tar.gz", hash = "sha256:cf9c1add09ce152975c94d48a1a89dd300c292e0761fd3d22a8071a98852e129", size = 840643, upload-time = "2024-08-16T11:03:01.315Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/55/0ae08a59293443bbbb8b692d1f4b6d9ca54562c359a48d0426684ac9ea06/gdal-3.13.1.tar.gz", hash = "sha256:94bb64d729ce73ceb75a314a15cba92696cdd854d99b6bf6b88a7b551227db74", size = 940649, upload-time = "2026-06-05T10:50:14.929Z" }
 
 [[package]]
 name = "idna"
